@@ -1,15 +1,15 @@
-TTLite 🎴
+# TTLite 🎴
 
 TTLite é um jogo de cartas inspirado em Triple Triad, com artes próprias e mecânicas exclusivas, desenvolvido para rodar direto no navegador.
 O projeto ainda está em desenvolvimento.
 
-🔗 Jogue agora
+## 🔗 Jogue agora
 
 Você pode jogar a versão atual do projeto aqui:
 
 ➡️ https://alexfoffano.github.io/ttlite/
 
-🕹️ Sobre o jogo
+## 🕹️ Sobre o jogo
 
 Sistema de cartas no estilo Triple Triad
 
@@ -21,7 +21,7 @@ Pensado para rodar direto no navegador, sem instalação
 
 Como o projeto ainda está em desenvolvimento, algumas mecânicas, telas e efeitos podem mudar a qualquer momento.
 
-🛠️ Tecnologias
+## 🛠️ Tecnologias
 
 HTML
 
@@ -29,7 +29,7 @@ CSS
 
 JavaScript
 
-🧭 Status do projeto
+## 🧭 Status do projeto
 
 🔄 Em desenvolvimento
 
