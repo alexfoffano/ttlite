@@ -1,0 +1,33 @@
+
+
+/* Scoped responsive sizing (only mobile/tablet) */
+@media (max-width: 1024px), (hover: none) {
+  :root{
+    --tt-gap: 8px;
+    --tt-cellW: min(28vw, 112px);
+    --tt-cellH: calc(var(--tt-cellW) * 4 / 3);
+  }
+  #board{
+    display: grid;
+    grid-template-columns: repeat(3, var(--tt-cellW));
+    grid-template-rows: repeat(3, var(--tt-cellH));
+    gap: var(--tt-gap);
+  }
+  #board .cell{ width: var(--tt-cellW); height: var(--tt-cellH); }
+  .hand .card{ width: var(--tt-cellW); height: var(--tt-cellH); }
+}
+
+/* Landscape: avoid vertical scroll */
+@media (max-width: 1024px) and (orientation: landscape),
+       (hover: none) and (orientation: landscape) {
+  html, body { height: 100dvh; overflow: hidden; }
+}
+
+/* Topbar fill & stack on small screens */
+.topbar{ width:100%; grid-template-columns:auto 1fr auto; }
+.tb-center, .center-wrap{ width:100%; }
+@media (max-width: 720px){
+  .topbar{ grid-template-columns: 1fr; row-gap: 8px; padding: 10px 12px; }
+  .tb-left, .tb-center, .tb-right{ justify-self: stretch; }
+  .tb-center{ order: 3; }
+}
