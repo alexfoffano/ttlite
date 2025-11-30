@@ -37,7 +37,7 @@ JavaScript
 
 🔜 Novas mecânicas, efeitos e ajustes de balanceamento
 
-📌 Futuras melhorias (ideias)
+## 📌 Futuras melhorias (ideias)
 
 Tela de menu inicial
 
