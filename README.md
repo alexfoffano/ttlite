@@ -47,6 +47,6 @@ Efeitos visuais para vitórias/combos
 
 Modo multiplayer
 
-📣 Feedback
+## 📣 Feedback
 
 Se você jogou e tem alguma sugestão, pode abrir uma Issue aqui no GitHub ou entrar em contato comigo 😄
