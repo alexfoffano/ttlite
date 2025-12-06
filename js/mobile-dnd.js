@@ -1,213 +1,178 @@
-/* Triple Triad — mobile-dnd.js (v3.3)
- * Touch-first proxy drag that coexists with desktop HTML5 drag.
- * - Works with Pointer Events or touch events (fallback)
- * - Wires all cards in hands, but só inicia se .draggable === true
- * - Highlight só em células livres (usa state.board ou DOM fallback)
- * - playCard lookup dinâmico + fallback por evento "tt:playCard"
+/* Triple Triad — mobile-dnd.js (Versão Otimizada v2)
+ * Correção: Remove o "flicker" do efeito hover ao mover o mouse.
  */
-(function(){
-  const CONFIG = {
-    cardSelector: '.hand.you .card, .hand.ai .card',
-    boardCellSelector: '#board .cell',
-    dragScale: 1.05,
-    dimClass: 'drag-origin-dim'
-  };
 
-  const HAS_POINTER = !!window.PointerEvent;
-  const isTouchLike = () => matchMedia('(hover: none)').matches || ('ontouchstart' in window);
+document.addEventListener('DOMContentLoaded', () => {
+    const getHandCards = () => document.querySelectorAll('.hand.you .card:not(.disabled)');
+    
+    let activeCard = null;
+    let clone = null;
+    let initialRect = null;
+    let touchOffsetX = 0;
+    let touchOffsetY = 0;
+    
+    // Variável para lembrar qual célula está iluminada e evitar piscar
+    let currentHovered = null;
 
-  const getPlayCard = () => (typeof window.playCard === 'function') ? window.playCard : null;
-  const $all = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-
-  function isCellFree(cell){
-    if(!cell) return false;
-    const idx = parseInt(cell.dataset.index, 10);
-    const board = (window.state && Array.isArray(window.state.board)) ? window.state.board : null;
-    if(Number.isInteger(idx) && board){
-      return !board[idx];
-    }
-    // DOM fallback
-    return !cell.querySelector('.card');
-  }
-
-  function canStartDrag(card){
-    // Só começa se o jogo marcou como draggable (property ou atributo)
-    return card && (card.draggable === true || card.getAttribute('draggable') === 'true');
-  }
-
-  let dragging = null; // {orig, proxy, overCell, prevDraggable, offsetX, offsetY, mode}
-
-  function createProxyFrom(el){
-    const r = el.getBoundingClientRect();
-    const proxy = el.cloneNode(true);
-    Object.assign(proxy.style, {
-      position: 'fixed',
-      left: r.left + 'px',
-      top: r.top + 'px',
-      width: r.width + 'px',
-      height: r.height + 'px',
-      pointerEvents: 'none',
-      zIndex: 9999,
-      transform: 'scale(1)',
-      willChange: 'transform,left,top'
-    });
-    proxy.classList.add('tt-proxy');
-    document.body.appendChild(proxy);
-    return proxy;
-  }
-
-  function startDrag(card, clientX, clientY, mode){
-    if(!canStartDrag(card)) return;
-    // Avoid native gestures/scroll
-    card.style.touchAction = 'none';
-
-    const r = card.getBoundingClientRect();
-    const proxy = createProxyFrom(card);
-    const offsetX = clientX - r.left;
-    const offsetY = clientY - r.top;
-    proxy.style.transform = 'scale('+CONFIG.dragScale+')';
-
-    const prevDraggable = card.draggable;
-    card.draggable = false;
-    card.classList.add(CONFIG.dimClass);
-
-    dragging = { orig: card, proxy, overCell: null, prevDraggable, offsetX, offsetY, mode };
-  }
-
-  function moveDrag(clientX, clientY){
-    if(!dragging) return;
-    const { proxy, offsetX, offsetY } = dragging;
-    proxy.style.left = (clientX - offsetX) + 'px';
-    proxy.style.top  = (clientY - offsetY) + 'px';
-
-    const over = document.elementFromPoint(clientX, clientY);
-    const cell = (over && over.closest) ? over.closest(CONFIG.boardCellSelector) : null;
-    const free = isCellFree(cell);
-    highlightCell(free ? cell : null);
-    dragging.overCell = free ? cell : null;
-  }
-
-  function endDrag(){
-    if(!dragging) return;
-    const { orig, proxy, overCell, prevDraggable } = dragging;
-
-    orig.draggable = prevDraggable;
-    orig.classList.remove(CONFIG.dimClass);
-
-    clearHighlight();
-    proxy.remove();
-
-    if(overCell){
-      const playCardFn = getPlayCard();
-      const owner  = orig.dataset.owner  || 'you';
-      const hindex = parseInt(orig.dataset.hindex, 10);
-      const cindex = parseInt(overCell.dataset.index, 10);
-      if(Number.isInteger(hindex) && Number.isInteger(cindex)){
-        if(typeof playCardFn === 'function'){
-          try { playCardFn(owner, hindex, cindex); } catch(err){ console.error(err); }
-        } else {
-          document.dispatchEvent(new CustomEvent('tt:playCard', { detail: { owner, hindex, cindex } }));
+    // --- LÓGICA DO JOGO ---
+    function triggerGameMove(card, cell) {
+        let cellIndex = parseInt(cell.dataset.index, 10);
+        if (isNaN(cellIndex)) {
+            cellIndex = Array.from(cell.parentNode.children).indexOf(cell);
         }
-      }
-    }
-    dragging = null;
-  }
 
-  // Pointer path
-  function onPointerDown(e){
-    // Só ativa em contexto touch-like para não conflitar com desktop
-    if(e.pointerType !== 'touch' && !isTouchLike()) return;
-    const el = e.currentTarget;
-    startDrag(el, e.clientX, e.clientY, 'pointer');
-    if(dragging){
-      window.addEventListener('pointermove', onPointerMove, { passive: true });
-      window.addEventListener('pointerup', onPointerUp, { passive: true });
-      window.addEventListener('pointercancel', onPointerUp, { passive: true });
-      e.preventDefault?.();
-    }
-  }
-  function onPointerMove(e){ moveDrag(e.clientX, e.clientY); }
-  function onPointerUp(e){
-    endDrag();
-    window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerup', onPointerUp);
-    window.removeEventListener('pointercancel', onPointerUp);
-  }
+        let cardIndex = parseInt(card.dataset.hindex, 10);
+        if (isNaN(cardIndex)) {
+            cardIndex = Array.from(card.parentNode.children).indexOf(card);
+        }
 
-  // Touch fallback (para navegadores sem Pointer Events ou com conflitos)
-  function onTouchStart(e){
-    const el = e.currentTarget;
-    if(!isTouchLike()) return;
-    if(!canStartDrag(el)) return;
-    const t = e.changedTouches && e.changedTouches[0];
-    if(!t) return;
-    startDrag(el, t.clientX, t.clientY, 'touch');
-    if(dragging){
-      window.addEventListener('touchmove', onTouchMove, { passive: false });
-      window.addEventListener('touchend', onTouchEnd, { passive: true });
-      window.addEventListener('touchcancel', onTouchEnd, { passive: true });
-      e.preventDefault(); // impede scroll/zoom gestual
-    }
-  }
-  function onTouchMove(e){
-    if(!dragging) return;
-    const t = e.changedTouches && e.changedTouches[0];
-    if(!t) return;
-    moveDrag(t.clientX, t.clientY);
-    e.preventDefault();
-  }
-  function onTouchEnd(e){
-    endDrag();
-    window.removeEventListener('touchmove', onTouchMove);
-    window.removeEventListener('touchend', onTouchEnd);
-    window.removeEventListener('touchcancel', onTouchEnd);
-  }
+        const owner = 'you';
 
-  function highlightCell(cell){
-    if(highlightCell._last && highlightCell._last !== cell){
-      highlightCell._last.style.removeProperty('outline');
-      highlightCell._last.style.removeProperty('outline-offset');
+        if (typeof window.playCard === 'function') {
+            window.playCard(owner, cardIndex, cellIndex);
+        } else {
+            document.dispatchEvent(new CustomEvent('tt:playCard', { 
+                detail: { owner, hindex: cardIndex, cindex: cellIndex } 
+            }));
+        }
     }
-    if(cell){
-      cell.style.outline = '2px dashed #8dd1ff';
-      cell.style.outlineOffset = '-4px';
-    }
-    highlightCell._last = cell || null;
-  }
-  function clearHighlight(){
-    if(highlightCell._last){
-      highlightCell._last.style.removeProperty('outline');
-      highlightCell._last.style.removeProperty('outline-offset');
-      highlightCell._last = null;
-    }
-  }
 
-  function wire(card){
-    if(card.__ttTouchDnD) return;
-    card.__ttTouchDnD = true;
-    // Sempre preparar para toque
-    card.style.touchAction = 'none';
-    if(HAS_POINTER){
-      card.addEventListener('pointerdown', onPointerDown, { passive: true });
-    }
-    // Touch fallback (e também em iOS para garantir)
-    card.addEventListener('touchstart', onTouchStart, { passive: false });
-  }
+    // --- EVENTOS ---
+    function onPointerDown(e) {
+        const card = e.target.closest('.card');
+        if (!card || card.classList.contains('disabled')) return;
+        if (!card.closest('.hand.you')) return;
 
-  function init(){
-    $all(CONFIG.cardSelector).forEach(wire);
-    const mo = new MutationObserver(muts=>{
-      for(const m of muts){
-        m.addedNodes.forEach(n=>{
-          if(!(n instanceof HTMLElement)) return;
-          if(n.matches && n.matches(CONFIG.cardSelector)) wire(n);
-          n.querySelectorAll?.(CONFIG.cardSelector).forEach(wire);
+        e.preventDefault();
+        
+        activeCard = card;
+        initialRect = card.getBoundingClientRect();
+        touchOffsetX = e.clientX - initialRect.left;
+        touchOffsetY = e.clientY - initialRect.top;
+
+        // Clone Visual
+        clone = card.cloneNode(true);
+        Object.assign(clone.style, {
+            position: 'fixed',
+            left: `${initialRect.left}px`,
+            top: `${initialRect.top}px`,
+            width: `${initialRect.width}px`,
+            height: `${initialRect.height}px`,
+            zIndex: '9999',
+            pointerEvents: 'none', // Essencial para ver o elemento embaixo
+            opacity: '0.9',
+            transform: 'scale(1.1)',
+            transition: 'none'
         });
-      }
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
-  }
+        
+        clone.classList.remove('selected');
+        document.body.appendChild(clone);
+        
+        activeCard.classList.add('drag-origin-dim');
+        activeCard.style.opacity = '0.4';
 
-  if(document.readyState!=='loading') init();
-  else document.addEventListener('DOMContentLoaded', init, { once:true });
-})();
+        card.setPointerCapture(e.pointerId);
+        card.addEventListener('pointermove', onPointerMove);
+        card.addEventListener('pointerup', onPointerUp);
+        card.addEventListener('pointercancel', onPointerUp);
+    }
+
+    function onPointerMove(e) {
+        if (!activeCard || !clone) return;
+        
+        const x = e.clientX - touchOffsetX;
+        const y = e.clientY - touchOffsetY;
+        clone.style.left = `${x}px`;
+        clone.style.top = `${y}px`;
+
+        // Chama a função corrigida de highlight
+        highlightDropZone(e.clientX, e.clientY);
+    }
+
+    function onPointerUp(e) {
+        if (!activeCard) return;
+
+        activeCard.releasePointerCapture(e.pointerId);
+        const targetCell = getDropTarget(e.clientX, e.clientY);
+
+        if (targetCell && targetCell.classList.contains('empty')) {
+            triggerGameMove(activeCard, targetCell);
+        } 
+
+        cleanup();
+    }
+
+    // --- AUXILIARES ---
+    function getDropTarget(x, y) {
+        const el = document.elementFromPoint(x, y);
+        return el ? el.closest('.cell') : null;
+    }
+
+    // CORREÇÃO AQUI: Lógica inteligente para evitar o "pisca-pisca"
+    function highlightDropZone(x, y) {
+        const target = getDropTarget(x, y);
+        
+        // Se o alvo for o mesmo que já está iluminado, NÃO FAZ NADA (economiza processamento e evita flicker)
+        if (target === currentHovered) {
+            return;
+        }
+
+        // Se tínhamos um alvo anterior, removemos o brilho dele
+        if (currentHovered) {
+            currentHovered.classList.remove('drag-hover');
+            currentHovered = null;
+        }
+
+        // Se temos um novo alvo válido e vazio, aplicamos o brilho
+        if (target && target.classList.contains('empty')) {
+            target.classList.add('drag-hover');
+            currentHovered = target; // Atualiza a referência
+        }
+    }
+
+    function cleanup() {
+        if (activeCard) {
+            activeCard.removeEventListener('pointermove', onPointerMove);
+            activeCard.removeEventListener('pointerup', onPointerUp);
+            activeCard.removeEventListener('pointercancel', onPointerUp);
+            activeCard.classList.remove('drag-origin-dim');
+            activeCard.style.opacity = '';
+        }
+        
+        if (clone) clone.remove();
+        
+        // Limpa qualquer highlight restante
+        if (currentHovered) {
+            currentHovered.classList.remove('drag-hover');
+            currentHovered = null;
+        }
+        
+        activeCard = null;
+        clone = null;
+    }
+
+    function initCards() {
+        getHandCards().forEach(card => {
+            card.removeEventListener('pointerdown', onPointerDown);
+            card.addEventListener('pointerdown', onPointerDown);
+            card.style.touchAction = 'none';
+        });
+    }
+
+    initCards();
+
+    const observer = new MutationObserver((mutations) => {
+        let shouldReinit = false;
+        mutations.forEach(m => {
+            if (m.target.classList.contains('hand') || m.target.classList.contains('you')) {
+                shouldReinit = true;
+            }
+        });
+        if (shouldReinit) initCards();
+    });
+
+    const handContainer = document.querySelector('.hand.you');
+    if (handContainer) {
+        observer.observe(handContainer, { childList: true, subtree: true });
+    }
+});
