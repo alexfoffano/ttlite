@@ -1,32 +1,31 @@
-/* Triple Triad — mobile-dnd.js (Versão Otimizada v2)
- * Correção: Remove o "flicker" do efeito hover ao mover o mouse.
+/* Triple Triad — mobile-dnd.js (Versão Final v3)
+ * Correções:
+ * 1. Permite arrastar cartas do Jogador 2 (IA desligada/Local Multiplayer).
+ * 2. Visual do clone sempre mostra a frente da carta (remove 'flipped').
+ * 3. Otimização de Highlight sem flicker.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const getHandCards = () => document.querySelectorAll('.hand.you .card:not(.disabled)');
+    // Seleciona todas as cartas que não estão desabilitadas
+    const getPlayableCards = () => document.querySelectorAll('.hand .card:not(.disabled)');
     
     let activeCard = null;
     let clone = null;
     let initialRect = null;
     let touchOffsetX = 0;
     let touchOffsetY = 0;
-    
-    // Variável para lembrar qual célula está iluminada e evitar piscar
     let currentHovered = null;
 
     // --- LÓGICA DO JOGO ---
     function triggerGameMove(card, cell) {
         let cellIndex = parseInt(cell.dataset.index, 10);
-        if (isNaN(cellIndex)) {
-            cellIndex = Array.from(cell.parentNode.children).indexOf(cell);
-        }
+        if (isNaN(cellIndex)) cellIndex = Array.from(cell.parentNode.children).indexOf(cell);
 
         let cardIndex = parseInt(card.dataset.hindex, 10);
-        if (isNaN(cardIndex)) {
-            cardIndex = Array.from(card.parentNode.children).indexOf(card);
-        }
+        if (isNaN(cardIndex)) cardIndex = Array.from(card.parentNode.children).indexOf(card);
 
-        const owner = 'you';
+        // Detecta dono dinamicamente (para suportar Jogador 2)
+        const owner = card.closest('.hand').classList.contains('ai') ? 'ai' : 'you';
 
         if (typeof window.playCard === 'function') {
             window.playCard(owner, cardIndex, cellIndex);
@@ -40,9 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- EVENTOS ---
     function onPointerDown(e) {
         const card = e.target.closest('.card');
+        
+        // Verifica se é uma carta válida e se não está desabilitada
         if (!card || card.classList.contains('disabled')) return;
-        if (!card.closest('.hand.you')) return;
-
+        
         e.preventDefault();
         
         activeCard = card;
@@ -52,6 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Clone Visual
         clone = card.cloneNode(true);
+        
+        // Garante que o clone mostre a face da carta
+        clone.classList.remove('flipped'); 
+        
         Object.assign(clone.style, {
             position: 'fixed',
             left: `${initialRect.left}px`,
@@ -59,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
             width: `${initialRect.width}px`,
             height: `${initialRect.height}px`,
             zIndex: '9999',
-            pointerEvents: 'none', // Essencial para ver o elemento embaixo
+            pointerEvents: 'none',
             opacity: '0.9',
-            transform: 'scale(1.1)',
+            transform: 'scale(1.1)', 
             transition: 'none'
         });
         
@@ -85,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clone.style.left = `${x}px`;
         clone.style.top = `${y}px`;
 
-        // Chama a função corrigida de highlight
         highlightDropZone(e.clientX, e.clientY);
     }
 
@@ -108,25 +111,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return el ? el.closest('.cell') : null;
     }
 
-    // CORREÇÃO AQUI: Lógica inteligente para evitar o "pisca-pisca"
     function highlightDropZone(x, y) {
         const target = getDropTarget(x, y);
-        
-        // Se o alvo for o mesmo que já está iluminado, NÃO FAZ NADA (economiza processamento e evita flicker)
-        if (target === currentHovered) {
-            return;
-        }
+        if (target === currentHovered) return;
 
-        // Se tínhamos um alvo anterior, removemos o brilho dele
         if (currentHovered) {
             currentHovered.classList.remove('drag-hover');
             currentHovered = null;
         }
 
-        // Se temos um novo alvo válido e vazio, aplicamos o brilho
         if (target && target.classList.contains('empty')) {
             target.classList.add('drag-hover');
-            currentHovered = target; // Atualiza a referência
+            currentHovered = target;
         }
     }
 
@@ -141,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (clone) clone.remove();
         
-        // Limpa qualquer highlight restante
         if (currentHovered) {
             currentHovered.classList.remove('drag-hover');
             currentHovered = null;
@@ -151,9 +146,13 @@ document.addEventListener('DOMContentLoaded', () => {
         clone = null;
     }
 
+    // Inicialização segura
     function initCards() {
-        getHandCards().forEach(card => {
-            card.removeEventListener('pointerdown', onPointerDown);
+        document.querySelectorAll('.card').forEach(c => {
+            c.removeEventListener('pointerdown', onPointerDown);
+        });
+
+        getPlayableCards().forEach(card => {
             card.addEventListener('pointerdown', onPointerDown);
             card.style.touchAction = 'none';
         });
@@ -161,18 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initCards();
 
+    // Observa mudanças nas mãos
     const observer = new MutationObserver((mutations) => {
-        let shouldReinit = false;
-        mutations.forEach(m => {
-            if (m.target.classList.contains('hand') || m.target.classList.contains('you')) {
-                shouldReinit = true;
-            }
-        });
-        if (shouldReinit) initCards();
+        initCards();
     });
 
-    const handContainer = document.querySelector('.hand.you');
-    if (handContainer) {
-        observer.observe(handContainer, { childList: true, subtree: true });
+    const layout = document.querySelector('.layout');
+    if (layout) {
+        observer.observe(layout, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     }
 });
