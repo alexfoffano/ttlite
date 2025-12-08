@@ -11,8 +11,9 @@
   --gold: #f59e0b;
 
   /* --- DIMENSÕES DINÂMICAS --- */
+  /* Altura da carta define a escala do jogo. Desktop limitado a 180px */
   --card-h: min(24vh, 180px);
-  --card-w: calc(var(--card-h) * 0.75);
+  --card-w: calc(var(--card-h) * 0.75); /* Proporção 3:4 */
   --gap: 1.5vh; 
 }
 
@@ -21,17 +22,17 @@
 html, body {
   margin: 0;
   width: 100vw;
-  height: 100dvh;
+  height: 100dvh; /* dvh evita bugs de barra no mobile */
   background: radial-gradient(circle at 50% 10%, #132235, #0b1117);
   color: var(--ink);
   font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  overflow: hidden;
-  user-select: none;
+  overflow: hidden; /* Trava rolagem */
+  user-select: none; /* Impede seleção de texto */
   -webkit-tap-highlight-color: transparent;
 }
 
 /* ==========================================================================
-   TOPBAR
+   TOPBAR (Barra Superior)
    ========================================================================== */
 .topbar {
   position: relative;
@@ -55,6 +56,7 @@ html, body {
   transition: all 0.3s ease;
 }
 
+/* Chips de Status e Placar */
 .status-line {
   background: rgba(11, 25, 40, 0.6);
   padding: 6px 14px;
@@ -77,6 +79,7 @@ html, body {
 
 .tb-right { display: flex; gap: 10px; align-items: center; }
 
+/* Botões */
 .btn.small {
   padding: 8px 14px;
   border-radius: 8px;
@@ -104,12 +107,12 @@ html, body {
   display: flex; 
   justify-content: center;
   align-items: center;
-  gap: 4vw;
+  gap: 4vw; /* Distância Desktop */
   padding: 10px;
 }
 
 /* ==========================================================================
-   TABULEIRO
+   TABULEIRO (BOARD)
    ========================================================================== */
 .board-wrap {
   position: relative;
@@ -118,9 +121,10 @@ html, body {
   align-items: center; justify-content: center;
 }
 
+/* Banner de Regras (Flutuante Absoluto) */
 .rule-banner {
   position: absolute;
-  top: -40px;
+  top: -40px; /* Flutua acima do tabuleiro */
   left: 50%; transform: translateX(-50%);
   background: rgba(0,0,0,0.85);
   padding: 6px 16px;
@@ -141,6 +145,8 @@ html, body {
   grid-template-rows: repeat(3, var(--card-h));
   gap: var(--gap);
   padding: var(--gap);
+  
+  /* Glassmorphism */
   background: rgba(13, 21, 32, 0.5);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -160,10 +166,13 @@ html, body {
   transition: all 0.1s ease-out;
 }
 
+/* EFEITO NEON AO ARRASTAR (Adicionado via JS) */
 .cell.drag-hover {
   border-color: var(--accent) !important;
   background: rgba(96, 165, 250, 0.15);
-  box-shadow: inset 0 0 20px rgba(96, 165, 250, 0.3), 0 0 15px rgba(96, 165, 250, 0.4);
+  box-shadow: 
+    inset 0 0 20px rgba(96, 165, 250, 0.3),
+    0 0 15px rgba(96, 165, 250, 0.4);
 }
 
 .cell .element-badge {
@@ -178,6 +187,7 @@ html, body {
    MÃOS (HANDS)
    ========================================================================== */
 .hand {
+  /* Desktop Padrão: Grid 2 colunas */
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -189,10 +199,6 @@ html, body {
   
   background: transparent; border: none;
   transition: opacity 0.3s;
-  
-  /* Fix: Z-Index para não cortar a carta ao dar zoom */
-  position: relative;
-  z-index: 20;
 }
 
 .hand.you { order: 1; }
@@ -211,7 +217,9 @@ html, body {
   position: relative;
   perspective: 1000px;
   cursor: grab;
-  touch-action: none;
+  touch-action: none; /* Importante para o Drag */
+  
+  /* Estado normal: levemente menor na mão */
   transform: scale(0.95);
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   margin: 0 !important;
@@ -220,14 +228,14 @@ html, body {
 .card:active { cursor: grabbing; }
 .card.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.8); }
 
-/* Hover inteligente: ignora cartas bloqueadas e IA (no turno do jogador) */
-.hand .card:not(.disabled):hover, .hand .card.selected {
+/* Hover sem "pular" */
+.hand .card:hover, .hand .card.selected {
   transform: scale(1.08); 
   z-index: 100;
   border-color: var(--accent);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+/* Faces */
 .card-inner {
   position: absolute; inset: 0;
   transition: transform 0.4s; transform-style: preserve-3d;
@@ -249,13 +257,15 @@ html, body {
   border: 2px solid #3b5c8c;
 }
 
+/* Bordas de posse */
 .card.owner-you .card-face.front::after { content: ""; position: absolute; inset: 0; border: 3px solid var(--you); border-radius: 8px; box-shadow: inset 0 0 10px rgba(74,222,128,0.3); }
 .card.owner-ai .card-face.front::after  { content: ""; position: absolute; inset: 0; border: 3px solid var(--ai); border-radius: 8px; box-shadow: inset 0 0 10px rgba(248,113,113,0.3); }
 
+/* Ghost Drag (Original diminuída) */
 .card.drag-origin-dim { opacity: 0.3 !important; }
 
 /* ==========================================================================
-   PIPS E EFEITOS
+   CARTAS NO TABULEIRO & PIPS
    ========================================================================== */
 .tile-card { position: absolute; inset: 2px; border-radius: 6px; overflow: hidden; }
 .tile-card img { width: 100%; height: 100%; object-fit: cover; }
@@ -320,11 +330,13 @@ html, body {
 .debug-panel.hidden { display: none; }
 .debug-panel .dbg-log { overflow-y: auto; padding: 8px; font-size: 11px; color: #a0aec0; }
 
+
 /* ==========================================================================
-   MEDIA QUERIES
+   MEDIA QUERIES (A LÓGICA MOBILE)
    ========================================================================== */
 
-/* 1. Mobile Geral (< 900px) */
+/* 1. Mobile Geral (Telas < 900px):
+   - Oculta Topbar e move placar para baixo (flutuante) */
 @media (max-width: 900px) {
   .topbar {
     position: fixed; top: 0; left: 0; right: 0; height: 0;
@@ -342,19 +354,25 @@ html, body {
     width: max-content;
   }
   .scoreline .pill { padding: 4px 10px; font-size: 12px; }
+  
   .layout { padding: 0; top: 0; width: 100vw; height: 100dvh; }
-  .rule-banner { top: 10px; }
+  .rule-banner { top: 10px; } /* Ajuste fino do banner no mobile */
 }
 
-/* 2. Mobile Portrait (Em pé) */
+/* 2. Mobile Portrait (Em pé) 
+   - Cartas e Board compactos para caber tudo na vertical */
 @media (max-width: 600px) and (orientation: portrait) {
   :root {
+    /* 15vh * 5 (1 linha IA + 3 linhas Board + 1 linha You) = 75vh */
     --card-h: 15vh; 
     --gap: 0.5vh;
   }
 
-  .layout { flex-direction: column; justify-content: center; gap: 2vh; }
+  .layout {
+    flex-direction: column; justify-content: center; gap: 2vh;
+  }
 
+  /* Mãos Horizontais */
   .hand {
     display: flex; flex-direction: row;
     width: 100%; height: var(--card-h);
@@ -362,19 +380,19 @@ html, body {
     justify-content: center; overflow: visible;
   }
 
-  /* FIX CRUCIAL: 'pointer-events: none' removido da IA */
-  .hand.ai { order: 1; margin-bottom: 0; }
-  
+  .hand.ai { order: 1; pointer-events: none; margin-bottom: 0; }
   .board-wrap { order: 2; }
   .hand.you { order: 3; margin-top: 0; }
 
+  /* Ajuste para caber 5 cartas na largura do celular */
   .hand .card {
     width: var(--card-w);
-    margin: 0 -8px !important;
+    margin: 0 -8px !important; /* Overlap lateral */
     transform: scale(1);
   }
   
-  .hand .card:not(.disabled):hover, .hand .card.selected {
+  /* Hover sobe a carta (translateY) em vez de Zoom apenas */
+  .hand .card:hover, .hand .card.selected {
     transform: translateY(-20px) scale(1.15);
     margin: 0 5px !important;
     z-index: 100;
@@ -383,11 +401,17 @@ html, body {
   .board { padding: 4px; border-radius: 12px; }
 }
 
-/* 3. Mobile Landscape (Deitado) */
+/* 3. Mobile Landscape (Deitado)
+   - Layout Horizontal, Mãos Laterais, Menu Oculto */
 @media (max-height: 500px) and (orientation: landscape) {
-  :root { --card-h: 27vh; --gap: 0.5vh; }
+  :root {
+    --card-h: 27vh; 
+    --gap: 0.5vh;
+  }
 
-  .layout { flex-direction: row; gap: 1vw; padding: 0 5vw; }
+  .layout {
+    flex-direction: row; gap: 1vw; padding: 0 5vw;
+  }
 
   .hand {
     display: grid; grid-template-columns: 1fr 1fr;
@@ -397,23 +421,128 @@ html, body {
   
   .hand .card { transform: scale(0.9); margin: 0 !important; }
   
-  .hand .card:hover, .hand .card.selected { transform: scale(1.05); z-index: 100; }
+  .hand .card:hover, .hand .card.selected {
+    transform: scale(1.05); z-index: 100;
+  }
 }
 
-/* --- FIX CORES DOS PIPS --- */
+/* --- CORES DOS PIPS (BÔNUS/PENALIDADE) --- */
+
+/* Bônus (Azul/Ciano) */
 .stats-central .pip.boost {
   color: var(--accent);
   border-color: var(--accent);
-  background: rgba(11, 26, 40, 0.95);
+  background: rgba(11, 26, 40, 0.95); /* Fundo mais escuro para contraste */
   box-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
   text-shadow: 0 0 5px var(--accent);
   z-index: 10;
 }
 
+/* Penalidade (Vermelho) */
 .stats-central .pip.penalty {
   color: var(--ai);
   border-color: var(--ai);
   background: rgba(40, 10, 10, 0.95);
   box-shadow: 0 0 10px rgba(248, 113, 113, 0.6);
   text-shadow: 0 0 5px var(--ai);
+}
+
+/* --- DECK BUILDER & FIXES (ADICIONADO) --- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+/* CORREÇÃO IMPORTANTE: Garante que a classe hidden esconda o modal */
+.modal-overlay.hidden { display: none !important; }
+
+.deck-box { background: var(--panel); border: 1px solid #27476f; border-radius: 12px; width: 95%; max-width: 900px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+.deck-box h2 { margin: 0; padding: 15px; background: var(--panel2); border-bottom: 1px solid #1f2a3a; display: flex; justify-content: space-between; align-items: center; }
+
+.deck-filters { padding: 10px; display: flex; gap: 15px; border-bottom: 1px solid #1f2a3a; background: #0b1117; align-items: center; }
+.deck-filters input { width: 50px; background: #162030; border: 1px solid #2d4566; color: white; border-radius: 4px; padding: 4px; }
+
+.deck-grid { 
+  flex: 1; 
+  overflow-y: auto; /* O scroll aparece aqui quando não couber */
+  padding: 15px; 
+  display: grid; 
+  /* Largura min 60px resulta em altura ~80px na proporção 3:4 */
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
+  /* Garante que a linha cresça conforme a carta, sem espremer */
+  grid-auto-rows: max-content; 
+  gap: 10px; 
+  align-content: start; 
+}
+
+/* Carta na lista - FIX VISUAL */
+.deck-card { 
+  position: relative; 
+  cursor: pointer; 
+  border-radius: 6px; 
+  overflow: hidden; 
+  border: 2px solid transparent; 
+  transition: transform 0.1s; 
+  /* background: #000; */
+  width: 100%;
+  aspect-ratio: 3 / 4; /* Trava a proporção. A carta nunca ficará "achatada" */
+  min-height: 80px;    /* Garante a altura mínima que você pediu */
+  display: flex;       /* Remove espaços fantasmas de imagens inline */
+}
+
+.deck-card img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  opacity: 0.8;
+}
+.deck-card:hover { transform: scale(1.05); z-index: 10; }
+.deck-card.selected { border-color: var(--you); box-shadow: 0 0 10px var(--you); transform: scale(0.95); }
+.deck-card.selected img { opacity: 0.4; } /* Escurece mais quando selecionado */
+.deck-card.selected::after { content: "✓"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--you); text-shadow: 0 2px 4px black; font-weight: bold; z-index: 30; }
+
+/* FIX: Números (Pips) na grade de seleção */
+.deck-card .stats-central {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Estilo específico para os números dentro do Deck Builder (menores e sobrepostos) */
+.deck-card .pip {
+  font-size: 14px; 
+  text-shadow: 1px 1px 2px black, 0 0 4px black;
+  font-weight: 800;
+  position: absolute; 
+  width: 20px; height: 20px; 
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  z-index: 5;
+}
+.deck-card .pip.T { top: 4px; left: 50%; transform: translateX(-50%); }
+.deck-card .pip.R { top: 50%; right: 4px; transform: translateY(-50%); }
+.deck-card .pip.B { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.deck-card .pip.L { top: 50%; left: 4px; transform: translateY(-50%); }
+
+.deck-footer { padding: 10px 20px; background: var(--panel2); border-top: 1px solid #1f2a3a; display: flex; justify-content: space-between; align-items: center; }
+.deck-preview { display: flex; gap: 5px; height: 60px; }
+.deck-preview img { height: 100%; border-radius: 4px; border: 1px solid #444; }
+
+/* Mobile ajustes */
+@media (max-width: 600px) {
+  .deck-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  .deck-footer { flex-direction: column; gap: 10px; height: auto; }
+}
+
+/* Agrupamento dos botões no rodapé do Deck Builder */
+.deck-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Ajuste para o botão Aleatório se destacar menos que o Batalhar */
+#btn-random-deck {
+  background: rgba(96, 165, 250, 0.2); /* Azul suave */
+  border-color: rgba(96, 165, 250, 0.4);
+}
+#btn-random-deck:hover {
+  background: rgba(96, 165, 250, 0.4);
 }

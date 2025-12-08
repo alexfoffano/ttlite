@@ -114,6 +114,27 @@
     <div class="dbg-head">Depuração</div>
     <div id="debug-log" class="dbg-log"></div>
   </aside>
+  
+  <div id="deck-modal" class="modal-overlay hidden">
+	<div class="deck-box">
+		<h2>Monte seu Deck <small>(<span id="deck-count">0</span>/5)</small></h2>
+		<div class="deck-filters">
+			<label>Nível Mín: <input type="number" id="filter-min" value="1" min="1" max="10"></label>
+			<label>Nível Máx: <input type="number" id="filter-max" value="10" min="1" max="10"></label>
+			<button id="btn-filter-apply" class="btn small">Filtrar</button>
+		</div>
+		<div id="deck-grid" class="deck-grid">
+			</div>
+		<div class="deck-footer">
+			<div class="deck-preview" id="deck-preview">
+				</div>
+			<div class="deck-actions">
+				<button id="btn-random-deck" class="btn small">Aleatório & Jogar</button>
+				<button id="btn-start-battle" class="btn primary" disabled>Batalhar!</button>
+			</div>
+		</div>
+	</div>
+  </div>
 
   <script src="js/cards.js"></script>
   <script src="js/game.js"></script>

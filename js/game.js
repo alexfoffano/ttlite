@@ -1,4 +1,4 @@
-/* === Triple Triad - Game Logic (v6 - Final: Batch Flip + Plus Fix) === */
+/* === Triple Triad - Game Logic (v14 - Weighted Random & Range Fix) === */
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const ELEMENTS = ["None","Fire","Ice","Thunder","Earth","Poison","Wind","Water","Holy"];
@@ -21,6 +21,7 @@ const state = {
   soundEnabled: true, soundVolume: 0.6,
   minLevel: 1, maxLevel: 10, wallLevel: 5, debug: false,
   firstMove: "random", aiStarts: false,
+  deckSelection: [] 
 };
 
 const $ = (s)=>document.querySelector(s);
@@ -76,7 +77,7 @@ function initUI(){
   $("#btn-menu").addEventListener("click", ()=>{ drawer.classList.remove("hidden"); setTimeout(()=>drawer.classList.add("open"),10); overlay.classList.remove("hidden"); });
   $("#btn-close-drawer").addEventListener("click", closeDrawer);
   $("#overlay").addEventListener("click", closeDrawer);
-  $("#drawer-restart").addEventListener("click", ()=>{ closeDrawer(); restart(); });
+  $("#drawer-restart").addEventListener("click", ()=>{ closeDrawer(); openDeckBuilder(); }); 
 
   $("#rule-same").addEventListener("change",e=>{state.rules.same=e.target.checked; refreshStatusLine();});
   $("#rule-plus").addEventListener("change",e=>{state.rules.plus=e.target.checked; refreshStatusLine();});
@@ -94,53 +95,219 @@ function initUI(){
   
   $("#hide-opponent").addEventListener("change",e=>{ if(state.aiLevel==="off") return; state.hideOpponent=e.target.checked; renderHands(); });
   
+  // Deck Builder UI
+  $("#btn-filter-apply").addEventListener("click", ()=> renderDeckGrid());
+  
+  // Botão Batalhar (Manual)
+  $("#btn-start-battle").addEventListener("click", ()=> {
+      document.getElementById("deck-modal").classList.add("hidden");
+      startBattleWithSelection();
+  });
+
+  // Botão Aleatório (Quick Play)
+  $("#btn-random-deck").addEventListener("click", ()=> {
+      startRandomBattle();
+  });
+
   const changeLvl = (isMax, val) => {
       val = Math.max(1, Math.min(10, parseInt(val)||1));
       if(isMax){ state.maxLevel=val; if(state.minLevel>val) state.minLevel=val; }
       else { state.minLevel=val; if(state.maxLevel<val) state.maxLevel=val; }
       $("#min-level").value=state.minLevel; $("#max-level").value=state.maxLevel;
-      restart(); refreshStatusLine();
+      $("#filter-min").value = state.minLevel;
+      $("#filter-max").value = state.maxLevel;
+      openDeckBuilder(); 
+      refreshStatusLine();
   };
   $("#max-level").addEventListener("change",e=>changeLvl(true,e.target.value));
   $("#min-level").addEventListener("change",e=>changeLvl(false,e.target.value));
   $("#wall-level").addEventListener("change",e=>{ let v=e.target.value; if(v==="A"||v==="a")v="10"; state.wallLevel=parseInt(v)||5; refreshStatusLine(); });
   
-  $("#first-move").addEventListener("change",e=>{ state.firstMove=e.target.value; restart(); });
-  $("#btn-restart").addEventListener("click",()=>restart());
+  $("#first-move").addEventListener("change",e=>{ state.firstMove=e.target.value; });
+  $("#btn-restart").addEventListener("click",()=>openDeckBuilder());
   $("#sound-enabled").addEventListener("change",e=>state.soundEnabled=e.target.checked);
   $("#sound-volume").addEventListener("input",e=>state.soundVolume=parseFloat(e.target.value));
   $("#debug-mode").addEventListener("change",e=>{ state.debug=e.target.checked; $("#debug-panel").classList.toggle("hidden", !state.debug); });
   $("#debug-clear").addEventListener("click", debugClear);
   
-  $("#btn-again").addEventListener("click", ()=>{ $("#result-modal").classList.remove("show"); restart(); });
+  $("#btn-again").addEventListener("click", ()=>{ $("#result-modal").classList.remove("show"); openDeckBuilder(); });
   $("#btn-close").addEventListener("click", ()=>{ $("#result-modal").classList.remove("show"); });
   
   refreshStatusLine();
 }
 
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-function weightedSample(list, n){ 
-    const pool=list.map(c=>({c, w:Math.max(1,c.level||1)})); 
-    const out=[]; 
-    while(out.length<n && pool.length>0){ 
-        const total=pool.reduce((s,x)=>s+x.w,0); 
-        let r=Math.random()*total; 
-        let k=0; for(;k<pool.length;k++){ r-=pool[k].w; if(r<=0) break; } 
-        if(k>=pool.length) k=pool.length-1; 
-        out.push(pool[k].c); pool.splice(k,1);
-    } 
-    while(out.length<n) out.push(list[Math.floor(Math.random()*list.length)]);
-    return out; 
+/* --- DECK BUILDER LOGIC --- */
+function openDeckBuilder(){
+    state.deckSelection = [];
+    $("#deck-count").textContent = "0";
+    $("#deck-preview").innerHTML = "";
+    $("#btn-start-battle").disabled = true;
+    
+    const modal = document.getElementById("deck-modal");
+    modal.classList.remove("hidden");
+    
+    // Sincroniza inputs com o state global
+    $("#filter-min").value = state.minLevel;
+    $("#filter-max").value = state.maxLevel;
+    
+    renderDeckGrid();
 }
 
-function deal(){
-  let pool = CARDS.filter(c => (c.level||1)>=state.minLevel && (c.level||1)<=state.maxLevel);
-  if(pool.length<10) pool = CARDS;
-  let chosen = weightedSample(pool, 10);
-  chosen.sort(()=>Math.random()-0.5);
-  state.yourHand = chosen.slice(0,5);
-  state.aiHand   = chosen.slice(5,10);
+function renderDeckGrid(){
+    const min = parseInt($("#filter-min").value)||1;
+    const max = parseInt($("#filter-max").value)||10;
+    
+    // Atualiza APENAS state (mas não o Deal ainda)
+    state.minLevel = min; state.maxLevel = max; 
+    refreshStatusLine();
 
+    const grid = $("#deck-grid");
+    grid.innerHTML = "";
+    
+    const pool = CARDS.filter(c => (c.level||1)>=min && (c.level||1)<=max);
+    
+    pool.forEach(card => {
+        const el = document.createElement("div");
+        el.className = "deck-card";
+        if(state.deckSelection.find(c=>c.id===card.id)) el.classList.add("selected");
+        
+        el.innerHTML = `
+            <img src="${card.image}" loading="lazy" title="${card.name} (Lvl ${card.level})">
+            ${getPipHtml(card)} 
+        `;
+        
+        el.addEventListener("click", ()=> toggleDeckCard(card, el));
+        grid.appendChild(el);
+    });
+}
+
+function toggleDeckCard(card, element){
+    const idx = state.deckSelection.findIndex(c=>c.id === card.id);
+    
+    if(idx >= 0){
+        state.deckSelection.splice(idx, 1);
+        element.classList.remove("selected");
+    } else {
+        if(state.deckSelection.length < 5){
+            state.deckSelection.push(card);
+            element.classList.add("selected");
+        }
+    }
+    updateDeckUI();
+}
+
+function updateDeckUI(){
+    const count = state.deckSelection.length;
+    $("#deck-count").textContent = count;
+    $("#btn-start-battle").disabled = (count !== 5);
+    
+    const preview = $("#deck-preview");
+    preview.innerHTML = "";
+    state.deckSelection.forEach(c => {
+        const img = document.createElement("img");
+        img.src = c.image;
+        preview.appendChild(img);
+    });
+}
+
+function startBattleWithSelection(){
+    deal(state.deckSelection);
+    restartGameUI();
+}
+
+function startRandomBattle(){
+    // Lê os filtros atuais do modal
+    const min = parseInt($("#filter-min").value)||1;
+    const max = parseInt($("#filter-max").value)||10;
+    
+    // Atualiza o state
+    state.minLevel = min;
+    state.maxLevel = max;
+
+    // Gera mão aleatória (ponderada)
+    const randomDeck = weightedRandomHand(5, min, max);
+    
+    // Inicia
+    document.getElementById("deck-modal").classList.add("hidden");
+    deal(randomDeck);
+    restartGameUI();
+}
+
+/* ------------------------- */
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+// NOVA FUNÇÃO: Sorteio Ponderado (Níveis altos têm mais peso)
+function weightedRandomHand(count, min, max){
+    // Filtra pool
+    let pool = CARDS.filter(c => (c.level||1)>=min && (c.level||1)<=max);
+    if(pool.length < count) pool = CARDS; // Fallback
+
+    // Prepara pool com pesos (Peso = Nível)
+    // Ex: Nível 1 tem peso 1, Nível 10 tem peso 10.
+    const weightedPool = pool.map(c => ({ card: c, weight: (c.level||1) }));
+    
+    const out = [];
+    
+    // Seleção
+    while(out.length < count && weightedPool.length > 0){
+        const totalWeight = weightedPool.reduce((sum, item) => sum + item.weight, 0);
+        let r = Math.random() * totalWeight;
+        
+        let selectedIndex = -1;
+        for(let i=0; i<weightedPool.length; i++){
+            r -= weightedPool[i].weight;
+            if(r <= 0){
+                selectedIndex = i;
+                break;
+            }
+        }
+        // Fallback de segurança (arredondamento)
+        if(selectedIndex === -1) selectedIndex = weightedPool.length - 1;
+        
+        out.push({...weightedPool[selectedIndex].card});
+        
+        // Remove do pool para evitar duplicatas na mão
+        weightedPool.splice(selectedIndex, 1);
+    }
+    
+    // Caso o pool tenha acabado antes de 5 cartas (range minúsculo)
+    while(out.length < count){
+        const randomFallback = pool[Math.floor(Math.random()*pool.length)];
+        out.push({...randomFallback});
+    }
+
+    return out;
+}
+
+function deal(playerChoice = null){
+  // Definição do Range da IA para esta partida
+  let aiMin = state.minLevel;
+  let aiMax = state.maxLevel;
+
+  // 1. Mão do Jogador
+  if(playerChoice && playerChoice.length === 5){
+      state.yourHand = playerChoice.map(c=>({...c})); 
+
+      // ADAPTAÇÃO DA IA:
+      // Se o jogador escolheu cartas (manualmente ou via random), 
+      // a IA deve jogar no mesmo nível dessas cartas.
+      const levels = state.yourHand.map(c => c.level || 1);
+      aiMin = Math.min(...levels);
+      aiMax = Math.max(...levels);
+      
+      // FIX: NÃO alteramos state.minLevel/maxLevel aqui.
+      // Isso previne que o menu "mude sozinho" na próxima partida.
+      
+  } else {
+      // Se cair aqui (ex: erro), gera aleatório com base no global
+      state.yourHand = weightedRandomHand(5, state.minLevel, state.maxLevel);
+  }
+
+  // 2. Mão da IA (Usa o range calculado localmente aiMin/aiMax)
+  state.aiHand = weightedRandomHand(5, aiMin, aiMax);
+  
+  // 3. Tabuleiro
   state.board=Array(9).fill(null);
   state.boardElements=Array(9).fill("None");
   if(state.rules.elemental){
@@ -155,7 +322,11 @@ function deal(){
 }
 
 function restart(){
-  deal(); renderAll(); updateActiveHandIndicator(); updateHandInteractivity();
+    openDeckBuilder();
+}
+
+function restartGameUI(){
+  renderAll(); updateActiveHandIndicator(); updateHandInteractivity();
   const hideCk=$("#hide-opponent");
   if(state.aiLevel==="off"){ state.hideOpponent=false; if(hideCk){ hideCk.checked=false; hideCk.disabled=true; } }
   else { if(hideCk) hideCk.disabled=false; }
@@ -198,14 +369,12 @@ function detectSamePlus(owner, index, placedCard){
   const sameTriggered = state.rules.same && (sameAnyCount >= 2) && (sameEnemyIdx.length >= 1);
   const sameFlipIdx = sameTriggered ? sameEnemyIdx.slice() : [];
   
-  // FIX: Plus Trigger Logic Update (Precisa envolver inimigo)
   let plusTriggered=false; const plusFlipIdx=[];
   if(state.rules.plus){
     const sums = new Map();
     for(const p of plusPairs){ if(!sums.has(p.sum)) sums.set(p.sum, []); sums.get(p.sum).push(p); }
     for(const [sum, arr] of sums){
       if(arr.length>=2){
-        // Verifica se pelo menos 1 carta envolvida é inimiga
         const hasEnemy = arr.some(x => {
             const slot = state.board[x.ni];
             return slot && slot.owner !== owner;
@@ -282,27 +451,21 @@ function getPipHtml(card, idx=null){
 function renderBoard(){
   for(let i=0;i<9;i++){
     const cell=boardEl.children[i], elem=state.boardElements[i];
-    
-    // Verifica se tem elemento
     if(elem!=="None"){ 
         cell.dataset.element=elem;
-        // Restaura o gradiente azulado
         cell.style.background="linear-gradient(to bottom right, rgba(96,165,250,.12), rgba(96,165,250,.02))";
-        
         if(!cell.querySelector(".element-badge")){ 
             const b=document.createElement("div"); b.className="element-badge"; b.textContent=elem; cell.appendChild(b); 
         }
     } else { 
         cell.removeAttribute("data-element"); 
-        cell.style.background=""; // Limpa o fundo se não tiver elemento
+        cell.style.background=""; 
         const b=cell.querySelector(".element-badge"); if(b) b.remove(); 
     }
-    
     const slot=state.board[i];
     cell.classList.toggle("empty", !slot);
     const existing = cell.querySelector(".tile-card");
     if(existing) existing.remove();
-    
     if(slot){
         const w=document.createElement("div"); w.className="tile-card owner-"+slot.owner;
         w.innerHTML = `<img src="${slot.card.image}">` + getPipHtml(slot.card, i);
@@ -310,7 +473,6 @@ function renderBoard(){
     }
   }
 }
-
 function refreshBoardStats(){ renderBoard(); } 
 function renderScores(){ 
     const you = state.yourHand.length + state.board.filter(s=>s && s.owner==="you").length; 
@@ -328,23 +490,17 @@ async function onBoardClick(i){
   await playCard(owner, parseInt(sel.dataset.hindex), i);
 }
 
-// FUNCIONALIDADE BATCH FLIP (Restaurada)
+// BATCH FLIP
 async function flipBatch(indices, newOwner){
     if(!indices || indices.length === 0) return;
-    
     AudioManager.play('flip');
     const cells = Array.from(boardEl.children);
-    
-    // Adiciona animação visual
     indices.forEach(idx => {
         const cell = cells[idx];
         const tile = cell.querySelector('.tile-card');
         if(tile) tile.classList.add('flip-anim');
     });
-
     await sleep(350);
-
-    // Atualiza lógica
     let changed = false;
     indices.forEach(idx => {
         if(state.board[idx] && state.board[idx].owner !== newOwner){
@@ -352,7 +508,6 @@ async function flipBatch(indices, newOwner){
             changed = true;
         }
     });
-
     if(changed){ renderBoard(); renderScores(); }
     await sleep(150);
 }
@@ -365,7 +520,6 @@ async function playCard(owner, handIndex, cellIndex){
   state.board[cellIndex]={card, owner};
   AudioManager.play('place');
   renderHands(); renderBoard(); renderScores();
-  debugLog(`Jogada: ${owner} colocou "${card.name}" em ${cellIndex}`, "normal");
   
   const res=detectSamePlus(owner, cellIndex, card);
   let specialFlips = []; 
@@ -380,12 +534,10 @@ async function playCard(owner, handIndex, cellIndex){
     const targets = [...new Set([...res.sameFlipIdx, ...res.plusFlipIdx])];
     targets.forEach(idx => showReason(idx, msg));
     
-    // RESTAURADO: Virada em lote para regras especiais
     await flipBatch(targets, owner);
     specialFlips = targets;
     
     if(state.rules.combo){
-        // Dispara combo em cascata
         for(const idx of targets){ await comboFrom(idx, owner); }
     }
   }
@@ -395,7 +547,6 @@ async function playCard(owner, handIndex, cellIndex){
   
   if(normalTargets.length > 0){
       normalTargets.forEach(idx => showReason(idx, "Normal"));
-      // RESTAURADO: Virada em lote para ataques normais
       await flipBatch(normalTargets, owner);
   }
 
@@ -422,11 +573,7 @@ async function comboFrom(index, newOwner){
       showBanner("COMBO");
       AudioManager.play('combo');
       targets.forEach(t => showReason(t, "Combo"));
-      
-      // RESTAURADO: Virada em lote para Combo
       await flipBatch(targets, newOwner);
-      
-      // Recursão para combos subsequentes
       for(const t of targets){ await comboFrom(t, newOwner); }
   }
 }
@@ -461,7 +608,6 @@ function getAdjustedStatsSim(ns, card, index){
   return adj;
 }
 
-// FIX: Simulação da IA também deve respeitar a regra do Plus (precisa de inimigo)
 function detectSamePlusSim(ns, owner, index, card){
   const placedAdj=getAdjustedStatsSim(ns,card,index);
   let sameEnemy=[], plus=[], sameAny=0;
@@ -478,57 +624,70 @@ function detectSamePlusSim(ns, owner, index, card){
   if(ns.rules.plus){
       const map={}; plus.forEach(p=>{ map[p.sum]=map[p.sum]||[]; map[p.sum].push(p.ni); });
       for(const k in map) {
-        const arr = map[k];
-        if(arr.length>=2){ 
-            // Validação de inimigo na simulação
-            const hasEnemy = arr.some(x => {
-                const s = ns.board[x.ni];
-                return s && s.owner !== owner;
-            });
-            if(hasEnemy){
-                plusTrig=true; 
-                arr.forEach(x=>{ if(!plusFlip.includes(x)) plusFlip.push(x); });
-            }
-        }
+          const arr=map[k];
+          if(arr.length>=2){
+             const hasEnemy = arr.some(x => { const s=ns.board[x]; return s && s.owner!==owner; });
+             if(hasEnemy){
+                 plusTrig=true; 
+                 arr.forEach(x=>{ if(!plusFlip.includes(x)) plusFlip.push(x); });
+             }
+          }
       }
   }
-  return { sameFlip: sameTrig?sameEnemy:[], plusFlip: plusTrig?plusFlip:[], trig: sameTrig||plusTrig };
+  return { sameTriggered: sameTrig, plusTriggered: plusTrig, sameFlipIdx: (sameTrig?sameEnemy:[]), plusFlipIdx: (plusTrig?plusFlip:[]) };
 }
 
 function simulatePlay(sim, owner, hi, ci){
     const hand=owner==="you"?sim.yourHand:sim.aiHand;
     const card=hand.splice(hi,1)[0];
     sim.board[ci]={card, owner};
+    
     const r=detectSamePlusSim(sim,owner,ci,card);
-    const flip=new Set([...r.sameFlip,...r.plusFlip]);
-    if(sim.rules.combo && r.trig){
-        const q=[...flip];
+    const special=new Set();
+    
+    const initialFlips = [...r.sameFlipIdx, ...r.plusFlipIdx];
+    initialFlips.forEach(i => {
+        if(sim.board[i] && sim.board[i].owner !== owner){
+            sim.board[i].owner = owner;
+            special.add(i);
+        }
+    });
+
+    if(sim.rules.combo && (r.sameTriggered || r.plusTriggered)){
+        const q = [...special]; 
         while(q.length){
-            const i=q.pop(); 
-            if(sim.board[i].owner===owner) continue;
-            sim.board[i].owner=owner;
+            const i = q.pop();
             for(const nb of neighbors(i)){
                 if(nb.ni===null) continue;
-                const s=sim.board[nb.ni];
-                if(s && s.owner!==owner){
-                   const a=getAdjustedStatsSim(sim,sim.board[i].card,i), b=getAdjustedStatsSim(sim,s.card,nb.ni);
-                   if(a[nb.dir]>b[nb.opp]) q.push(nb.ni);
+                const s = sim.board[nb.ni];
+                if(s && s.owner !== owner && !special.has(nb.ni)){
+                    const a = getAdjustedStatsSim(sim, sim.board[i].card, i);
+                    const b = getAdjustedStatsSim(sim, s.card, nb.ni);
+                    if(a[nb.dir] > b[nb.opp]){
+                        s.owner = owner;
+                        special.add(nb.ni);
+                        q.push(nb.ni);
+                    }
                 }
             }
         }
-    } else {
-        flip.forEach(i=>sim.board[i].owner=owner);
     }
-    for(const nb of neighbors(ci)){
-        if(nb.ni===null) continue;
-        const s=sim.board[nb.ni];
-        if(s && s.owner!==owner && !flip.has(nb.ni)){
-            const a=getAdjustedStatsSim(sim,card,ci), b=getAdjustedStatsSim(sim,s.card,nb.ni);
-            if(a[nb.dir]>b[nb.opp]) sim.board[nb.ni].owner=owner;
+
+    const nrm=normalFlipTargetsSim(sim, owner, ci, card);
+    for(const i of nrm){
+        if(!special.has(i) && sim.board[i] && sim.board[i].owner!==owner){
+            sim.board[i].owner=owner;
         }
     }
     return sim;
 }
+
+function normalFlipTargetsSim(ns, owner, index, card){
+  const adj=getAdjustedStatsSim(ns,card,index), flips=[];
+  for(const nb of neighbors(index)){ const ni=nb.ni; if(ni===null) continue; const slot=ns.board[ni]; if(!slot||slot.owner===owner) continue; const oppAdj=getAdjustedStatsSim(ns,slot.card, ni); if(adj[nb.dir]>oppAdj[nb.opp]) flips.push(ni); }
+  return flips;
+}
+
 function evaluate(ns){ 
     return (ns.aiHand.length + ns.board.filter(s=>s&&s.owner==="ai").length) - 
            (ns.yourHand.length + ns.board.filter(s=>s&&s.owner==="you").length); 
@@ -550,31 +709,79 @@ function minimax(ns, depth, maxing, a, b){
         } return v;
     }
 }
-async function aiPlay(){
-    const moves=[]; 
-    state.aiHand.forEach((c,h)=>state.board.forEach((s,i)=>{if(!s) moves.push({h,i,c})}));
-    if(!moves.length) return;
-    
-    let chosen=moves[Math.floor(Math.random()*moves.length)];
-    if(state.aiLevel!=="easy"){
-        if(state.aiLevel==="medium" || state.aiLevel==="hard"){
-             let best=-Infinity;
-             moves.forEach(m=>{
-                 const sc = evaluate(simulatePlay(snapshot(),"ai",m.h,m.i));
-                 const corner=[0,2,6,8].includes(m.i)?0.5:0;
-                 if(sc+corner > best){ best=sc+corner; chosen=m; }
-             });
-        }
-        if(state.aiLevel==="master"){
-             let best=-Infinity; 
-             const depth = moves.length > 20 ? 2 : 3;
-             for(const m of moves){
-                 const v = minimax(simulatePlay(snapshot(),"ai",m.h,m.i), depth, false, -Infinity, Infinity);
-                 if(v > best){ best=v; chosen=m; }
-             }
-        }
-    }
-    await playCard("ai", chosen.h, chosen.i);
+
+function generateAIMoves(){ 
+    const cells=[]; 
+    for(let i=0;i<9;i++) if(!state.board[i]) cells.push(i);
+    const res=[]; 
+    state.aiHand.forEach((c,hi)=> cells.forEach(ci=> res.push({handIndex:hi, cellIndex:ci, card:c}))); 
+    return res; 
 }
 
-document.addEventListener("DOMContentLoaded", ()=>{ initUI(); restart(); });
+function chooseHeuristic(moves, opts){ opts=opts||{};
+  let best=null, bestScore=-1e9;
+  for(const m of moves){
+    let snap = snapshot(); 
+    if(opts.ignoreSamePlusWall){ snap.rules={...snap.rules, same:false, plus:false, samewall:false}; } 
+    const ns=simulatePlay(snap, "ai", m.handIndex, m.cellIndex);
+    const ai=ns.aiHand.length + ns.board.filter(s=>s && s.owner==="ai").length;
+    const you=ns.yourHand.length + ns.board.filter(s=>s && s.owner==="you").length;
+    const diff=ai-you;
+    const corner=[0,2,6,8].includes(m.cellIndex) ? 0.8 : 0;
+    const center=(m.cellIndex===4) ? 0.4 : 0;
+    const score=diff+corner+center;
+    if(score>bestScore){ bestScore=score; best=m; }
+  }
+  return best || moves[Math.floor(Math.random()*moves.length)];
+}
+
+function minimaxRoot(depth){ 
+    const moves=generateAIMoves(); 
+    let best=null, bestVal=-Infinity; 
+    for(const m of moves){ 
+        const val=minimax(simulatePlay(snapshot(),"ai",m.handIndex,m.cellIndex), depth-1, false, -Infinity, +Infinity); 
+        if(val>bestVal){ bestVal=val; best=m; } 
+    } 
+    return best; 
+}
+
+async function aiPlay(){
+    const moves=generateAIMoves(); 
+    if(moves.length===0){ return; }
+    
+    const isFirstAIMove = state.aiStarts && state.board.every(s=>!s);
+    let chosen;
+    
+    if(state.aiLevel==="easy"){
+        chosen = moves[Math.floor(Math.random()*moves.length)];
+        debugLog(`AI easy`,"normal");
+    }
+    else if(state.aiLevel==="medium"){
+        if(isFirstAIMove){
+            chosen = moves[Math.floor(Math.random()*moves.length)];
+        } else {
+            const forgetRules = Math.random() < 0.5;
+            chosen = chooseHeuristic(moves, {ignoreSamePlusWall: forgetRules}) || moves[Math.floor(Math.random()*moves.length)];
+        }
+        debugLog(`AI medium`,"normal");
+    }
+    else if(state.aiLevel==="hard"){
+        if(isFirstAIMove){
+            chosen = minimaxRoot(2) || chooseHeuristic(moves) || moves[Math.floor(Math.random()*moves.length)];
+        } else {
+            chosen = chooseHeuristic(moves) || minimaxRoot(2) || moves[Math.floor(Math.random()*moves.length)];
+        }
+        debugLog(`AI hard`,"normal");
+    }
+    else if(state.aiLevel==="master"){
+        chosen = minimaxRoot(3) || minimaxRoot(2) || chooseHeuristic(moves) || moves[Math.floor(Math.random()*moves.length)];
+        debugLog(`AI master`,"normal");
+    }
+    else {
+        chosen = moves[Math.floor(Math.random()*moves.length)];
+    }
+    
+    await playCard("ai", chosen.handIndex, chosen.cellIndex);
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{ initUI(); openDeckBuilder(); });
