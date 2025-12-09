@@ -1,4 +1,4 @@
-/* === Triple Triad - Game Logic (v14 - Weighted Random & Range Fix) === */
+/* === Triple Triad - Game Logic (v15 - Final Polish) === */
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const ELEMENTS = ["None","Fire","Ice","Thunder","Earth","Poison","Wind","Water","Holy"];
@@ -157,7 +157,7 @@ function renderDeckGrid(){
     const min = parseInt($("#filter-min").value)||1;
     const max = parseInt($("#filter-max").value)||10;
     
-    // Atualiza APENAS state (mas não o Deal ainda)
+    // Atualiza APENAS state (visual), sem travar lógica de deal ainda
     state.minLevel = min; state.maxLevel = max; 
     refreshStatusLine();
 
@@ -220,11 +220,11 @@ function startRandomBattle(){
     const min = parseInt($("#filter-min").value)||1;
     const max = parseInt($("#filter-max").value)||10;
     
-    // Atualiza o state
+    // Atualiza o state global (pois o usuário pediu explicitamente esse range no modal)
     state.minLevel = min;
     state.maxLevel = max;
 
-    // Gera mão aleatória (ponderada)
+    // Gera mão aleatória (ponderada) para o Jogador
     const randomDeck = weightedRandomHand(5, min, max);
     
     // Inicia
@@ -237,19 +237,17 @@ function startRandomBattle(){
 
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
-// NOVA FUNÇÃO: Sorteio Ponderado (Níveis altos têm mais peso)
+// NOVA: Sorteio Ponderado (Níveis altos têm mais peso)
 function weightedRandomHand(count, min, max){
     // Filtra pool
     let pool = CARDS.filter(c => (c.level||1)>=min && (c.level||1)<=max);
     if(pool.length < count) pool = CARDS; // Fallback
 
-    // Prepara pool com pesos (Peso = Nível)
-    // Ex: Nível 1 tem peso 1, Nível 10 tem peso 10.
+    // Peso = Nível da carta (Nível 10 é 10x mais provável que Nível 1)
     const weightedPool = pool.map(c => ({ card: c, weight: (c.level||1) }));
     
     const out = [];
     
-    // Seleção
     while(out.length < count && weightedPool.length > 0){
         const totalWeight = weightedPool.reduce((sum, item) => sum + item.weight, 0);
         let r = Math.random() * totalWeight;
@@ -262,16 +260,15 @@ function weightedRandomHand(count, min, max){
                 break;
             }
         }
-        // Fallback de segurança (arredondamento)
         if(selectedIndex === -1) selectedIndex = weightedPool.length - 1;
         
         out.push({...weightedPool[selectedIndex].card});
         
-        // Remove do pool para evitar duplicatas na mão
+        // Remove do pool para evitar duplicatas
         weightedPool.splice(selectedIndex, 1);
     }
     
-    // Caso o pool tenha acabado antes de 5 cartas (range minúsculo)
+    // Completa se faltar
     while(out.length < count){
         const randomFallback = pool[Math.floor(Math.random()*pool.length)];
         out.push({...randomFallback});
@@ -281,7 +278,7 @@ function weightedRandomHand(count, min, max){
 }
 
 function deal(playerChoice = null){
-  // Definição do Range da IA para esta partida
+  // Definição do Range da IA para esta partida (Variáveis Locais!)
   let aiMin = state.minLevel;
   let aiMax = state.maxLevel;
 
@@ -290,21 +287,20 @@ function deal(playerChoice = null){
       state.yourHand = playerChoice.map(c=>({...c})); 
 
       // ADAPTAÇÃO DA IA:
-      // Se o jogador escolheu cartas (manualmente ou via random), 
+      // Se o jogador escolheu cartas (manualmente ou via random button), 
       // a IA deve jogar no mesmo nível dessas cartas.
       const levels = state.yourHand.map(c => c.level || 1);
       aiMin = Math.min(...levels);
       aiMax = Math.max(...levels);
       
-      // FIX: NÃO alteramos state.minLevel/maxLevel aqui.
-      // Isso previne que o menu "mude sozinho" na próxima partida.
+      // NOTA: Não alteramos state.minLevel aqui para preservar a seleção do menu.
       
   } else {
-      // Se cair aqui (ex: erro), gera aleatório com base no global
+      // Se não houver escolha (ex: first load), usa o padrão global
       state.yourHand = weightedRandomHand(5, state.minLevel, state.maxLevel);
   }
 
-  // 2. Mão da IA (Usa o range calculado localmente aiMin/aiMax)
+  // 2. Mão da IA (Usa o range calculado localmente)
   state.aiHand = weightedRandomHand(5, aiMin, aiMax);
   
   // 3. Tabuleiro

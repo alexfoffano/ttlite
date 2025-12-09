@@ -2,100 +2,115 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Triple Triad — Protótipo</title>
   <link rel="stylesheet" href="css/styles.css">
-  </head>
+  <link rel="icon" href="data:,">
+</head>
 <body>
+
   <header class="topbar">
-    <div class="tb-left"><h1>Triple Triad — Protótipo</h1></div>
+    <div class="tb-left">
+      <h1>Triple Triad — Protótipo</h1>
+    </div>
+    
     <div class="tb-center">
       <div class="center-wrap">
-        <div id="status-line" class="status-line">Nível: <b>10</b> &nbsp; IA: <b>Médio</b> &nbsp; Regras: <b>Same Plus Wall Elemental Combo</b></div>
+        <div id="status-line" class="status-line">
+          Carregando...
+        </div>
+        
         <div class="scoreline" id="scorebar" aria-live="polite">
           <div class="pill you"><span id="label-you">Você</span>: <span id="score-you">5</span></div>
           <div class="pill ai"><span id="label-ai">Oponente</span>: <span id="score-ai">5</span></div>
         </div>
       </div>
     </div>
+
     <div class="tb-right">
       <button id="btn-restart" class="btn small">Reiniciar</button>
-      <button id="btn-menu" class="hamburger" aria-label="Abrir menu" title="Menu"><span></span><span></span><span></span></button>
+      <button id="btn-menu" class="hamburger" aria-label="Abrir menu" title="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </header>
 
   <div id="overlay" class="overlay hidden"></div>
-  <aside id="drawer" class="drawer hidden" aria-label="Menu de opções">
+
+  <aside id="drawer" class="drawer hidden">
     <div class="drawer-header">
-      <h2>Triple Triad — Protótipo</h2>
-      <button id="btn-close-drawer" class="btn icon" aria-label="Fechar">×</button>
+      <h2>Configurações</h2>
+      <button id="btn-close-drawer" class="btn icon">×</button>
     </div>
     <div class="drawer-content">
+      
       <div class="col">
-        <h4>Cartas de
-  <span class="nowrap">
-    <select id="min-level"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
-  </span>
-  a
-  <span class="nowrap">
-    <select id="max-level"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10" selected>10</option></select>
-  </span>
-</h4>
-<small class="hint">O sorteio prioriza níveis mais altos dentro do intervalo.</small>
-      </div>
-      <div class="col">
-        <h4>Adversário:</h4>
-        <label class="inline"><input type="checkbox" id="hide-opponent" checked> Ocultar cartas</label>
-        <label> Dificuldade:
-          <select id="ai-level">
-            <option value="off">Desligado (2P)</option>
-            <option value="easy">Fácil</option>
-            <option value="medium" selected>Médio</option>
-            <option value="hard">Difícil</option>
-            <option value="master">Mestre</option>
-          </select>
-        </label>
-      </div>
-      <div class="col">
-        <h4>Regras:</h4>
-        <label class="inline"><input type="checkbox" id="rule-same" checked> Same</label>
-        <label class="inline"><input type="checkbox" id="rule-plus" checked> Plus</label>
-        <label class="inline"><input type="checkbox" id="rule-samewall" checked> Same Wall</label>
-        <label class="inline"><input type="checkbox" id="rule-combo" checked> Combo</label>
-        <label class="inline"><input type="checkbox" id="rule-elemental" checked> Elemental</label>
-        <div class="mt-8">
-          <label for="wall-level"><strong>Nível da parede (Same Wall):</strong></label>
-          <select id="wall-level">
-            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">A</option>
-          </select>
+        <label>Nível das Cartas (Min – Max)</label>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+          <input type="number" id="min-level" min="1" max="10" value="1" style="width:100%">
+          <input type="number" id="max-level" min="1" max="10" value="10" style="width:100%">
         </div>
       </div>
+
       <div class="col">
-        <h4>Outros:</h4>
-        <label> Quem começa?
-          <select id="first-move">
-            <option value="you">Jogador 1</option>
-            <option value="ai">Jogador 2 / IA</option>
-            <option value="random" selected>Aleatório</option>
-          </select>
-        </label>
+        <label>Dificuldade da IA</label>
+        <select id="ai-level" style="width:100%; margin-top:5px; padding:8px; background:#162030; color:white; border:1px solid #2d4566; border-radius:4px;">
+          <option value="easy">Fácil (Aleatório)</option>
+          <option value="medium" selected>Médio (Normal)</option>
+          <option value="hard">Difícil (Estratégico)</option>
+          <option value="master">Mestre (Minimax)</option>
+          <option value="off">Desligado (2 Jogadores)</option>
+        </select>
+        <div style="margin-top:8px;">
+          <label class="inline"><input type="checkbox" id="hide-opponent" checked> Esconder cartas da IA</label>
+        </div>
+      </div>
+
+      <div class="col">
+        <label>Regras Ativas</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:5px;">
+          <label class="inline"><input type="checkbox" id="rule-same" checked> Same</label>
+          <label class="inline"><input type="checkbox" id="rule-plus" checked> Plus</label>
+          <label class="inline"><input type="checkbox" id="rule-combo" checked> Combo</label>
+          <label class="inline"><input type="checkbox" id="rule-elemental" checked> Elemental</label>
+        </div>
+        <div style="margin-top:8px; border-top:1px solid #ffffff1a; padding-top:8px;">
+          <label class="inline"><input type="checkbox" id="rule-samewall" checked> Same Wall</label>
+          <label class="inline" style="margin-left:10px;">Valor Wall: <input type="text" id="wall-level" value="5" size="2" style="text-align:center; background:#162030; color:white; border:none;"></label>
+        </div>
+      </div>
+
+      <div class="col">
+        <label>Quem começa?</label>
+        <select id="first-move" style="width:100%; margin-top:5px; padding:8px; background:#162030; color:white; border:1px solid #2d4566; border-radius:4px;">
+          <option value="random">Aleatório (Cara ou Coroa)</option>
+          <option value="you">Sempre Eu</option>
+          <option value="ai">Sempre Oponente</option>
+        </select>
+      </div>
+
+      <div class="col">
         <label class="inline"><input type="checkbox" id="sound-enabled" checked> Ativar sons</label>
         <label class="inline">Volume: <input type="range" id="sound-volume" min="0" max="1" step="0.01" value="0.6"></label>
-        <label class="inline"><input type="checkbox" id="debug-mode"> Ativar depuração de regras</label>
+        <hr style="border-color:#ffffff1a; margin:10px 0;">
+        <label class="inline"><input type="checkbox" id="debug-mode"> Ativar depuração</label>
         <button id="debug-clear" class="btn link" type="button">Limpar log</button>
       </div>
+
     </div>
     <div class="drawer-footer">
-      <button id="drawer-restart" class="btn primary">Reiniciar partida</button>
+      <button id="drawer-restart" class="btn primary">Reiniciar Partida</button>
     </div>
   </aside>
 
   <main class="layout">
     <div class="hand you" id="hand-you"></div>
+
     <div class="board-wrap">
       <div id="rule-banner" class="rule-banner hidden">SAME</div>
       <div id="board" class="board" aria-label="Tabuleiro 3x3"></div>
     </div>
+
     <div class="hand ai" id="hand-ai"></div>
   </main>
 
@@ -104,40 +119,55 @@
       <h2 id="result-title">Resultado</h2>
       <p id="result-detail"></p>
       <div class="actions">
-        <button id="btn-again">Jogar novamente</button>
-        <button id="btn-close">Fechar</button>
+        <button id="btn-again" class="btn primary">Jogar novamente</button>
+        <button id="btn-close" class="btn small">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deck-modal" class="modal-overlay hidden">
+    <div class="deck-box">
+      <h2>Monte seu Deck <small>(<span id="deck-count">0</span>/5)</small></h2>
+      
+      <div class="deck-filters">
+         <label>Nível Mín: 
+           <select id="filter-min">
+             <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+             <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+             <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+             <option value="10">10</option>
+           </select>
+         </label>
+         <label>Nível Máx: 
+           <select id="filter-max">
+             <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+             <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+             <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+             <option value="10" selected>10</option>
+           </select>
+         </label>
+         <button id="btn-filter-apply" class="btn small">Filtrar</button>
+      </div>
+
+      <div id="deck-grid" class="deck-grid">
+        </div>
+      
+      <div class="deck-footer">
+        <div class="deck-preview" id="deck-preview"></div>
+        <div class="deck-actions">
+          <button id="btn-random-deck" class="btn small">Aleatório</button>
+          <button id="btn-start-battle" class="btn primary" disabled>Batalhar!</button>
+        </div>
       </div>
     </div>
   </div>
 
   <aside id="debug-panel" class="debug-panel hidden">
-    <div class="dbg-head">Depuração</div>
-    <div id="debug-log" class="dbg-log"></div>
+    <div class="dbg-log" id="debug-log"></div>
   </aside>
-  
-  <div id="deck-modal" class="modal-overlay hidden">
-	<div class="deck-box">
-		<h2>Monte seu Deck <small>(<span id="deck-count">0</span>/5)</small></h2>
-		<div class="deck-filters">
-			<label>Nível Mín: <input type="number" id="filter-min" value="1" min="1" max="10"></label>
-			<label>Nível Máx: <input type="number" id="filter-max" value="10" min="1" max="10"></label>
-			<button id="btn-filter-apply" class="btn small">Filtrar</button>
-		</div>
-		<div id="deck-grid" class="deck-grid">
-			</div>
-		<div class="deck-footer">
-			<div class="deck-preview" id="deck-preview">
-				</div>
-			<div class="deck-actions">
-				<button id="btn-random-deck" class="btn small">Aleatório & Jogar</button>
-				<button id="btn-start-battle" class="btn primary" disabled>Batalhar!</button>
-			</div>
-		</div>
-	</div>
-  </div>
 
   <script src="js/cards.js"></script>
   <script src="js/game.js"></script>
   <script src="js/mobile-dnd.js"></script>
-  </body>
+</body>
 </html>

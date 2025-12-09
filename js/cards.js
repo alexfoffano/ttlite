@@ -1428,5 +1428,18 @@ const CARDS = [
     },
     "element": "None",
     "level": 10
+  },
+  {
+    "id": 201,
+    "name": "Pingu e Mimi",
+    "image": "assets/cards/201_pingumimi.png",
+    "stats": {
+      "T": 10,
+      "R": 5,
+      "B": 10,
+      "L": 5
+    },
+    "element": "None",
+    "level": 10
   }
 ];
