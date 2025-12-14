@@ -1,4 +1,4 @@
-/* === Triple Triad - Game Logic (v15 - Final Polish) === */
+/* === Triple Triad - Game Logic (v16 - Element Fix & Visuals) === */
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const ELEMENTS = ["None","Fire","Ice","Thunder","Earth","Poison","Wind","Water","Holy"];
@@ -95,16 +95,13 @@ function initUI(){
   
   $("#hide-opponent").addEventListener("change",e=>{ if(state.aiLevel==="off") return; state.hideOpponent=e.target.checked; renderHands(); });
   
-  // Deck Builder UI
   $("#btn-filter-apply").addEventListener("click", ()=> renderDeckGrid());
   
-  // Botão Batalhar (Manual)
   $("#btn-start-battle").addEventListener("click", ()=> {
       document.getElementById("deck-modal").classList.add("hidden");
       startBattleWithSelection();
   });
 
-  // Botão Aleatório (Quick Play)
   $("#btn-random-deck").addEventListener("click", ()=> {
       startRandomBattle();
   });
@@ -136,17 +133,14 @@ function initUI(){
   refreshStatusLine();
 }
 
-/* --- DECK BUILDER LOGIC --- */
+/* --- DECK BUILDER --- */
 function openDeckBuilder(){
     state.deckSelection = [];
     $("#deck-count").textContent = "0";
     $("#deck-preview").innerHTML = "";
     $("#btn-start-battle").disabled = true;
     
-    const modal = document.getElementById("deck-modal");
-    modal.classList.remove("hidden");
-    
-    // Sincroniza inputs com o state global
+    document.getElementById("deck-modal").classList.remove("hidden");
     $("#filter-min").value = state.minLevel;
     $("#filter-max").value = state.maxLevel;
     
@@ -156,14 +150,11 @@ function openDeckBuilder(){
 function renderDeckGrid(){
     const min = parseInt($("#filter-min").value)||1;
     const max = parseInt($("#filter-max").value)||10;
-    
-    // Atualiza APENAS state (visual), sem travar lógica de deal ainda
     state.minLevel = min; state.maxLevel = max; 
     refreshStatusLine();
 
     const grid = $("#deck-grid");
     grid.innerHTML = "";
-    
     const pool = CARDS.filter(c => (c.level||1)>=min && (c.level||1)<=max);
     
     pool.forEach(card => {
@@ -173,7 +164,8 @@ function renderDeckGrid(){
         
         el.innerHTML = `
             <img src="${card.image}" loading="lazy" title="${card.name} (Lvl ${card.level})">
-            ${getPipHtml(card)} 
+            ${getPipHtml(card)}
+            ${getElementIcon(card)}
         `;
         
         el.addEventListener("click", ()=> toggleDeckCard(card, el));
@@ -183,7 +175,6 @@ function renderDeckGrid(){
 
 function toggleDeckCard(card, element){
     const idx = state.deckSelection.findIndex(c=>c.id === card.id);
-    
     if(idx >= 0){
         state.deckSelection.splice(idx, 1);
         element.classList.remove("selected");
@@ -200,7 +191,6 @@ function updateDeckUI(){
     const count = state.deckSelection.length;
     $("#deck-count").textContent = count;
     $("#btn-start-battle").disabled = (count !== 5);
-    
     const preview = $("#deck-preview");
     preview.innerHTML = "";
     state.deckSelection.forEach(c => {
@@ -216,94 +206,57 @@ function startBattleWithSelection(){
 }
 
 function startRandomBattle(){
-    // Lê os filtros atuais do modal
     const min = parseInt($("#filter-min").value)||1;
     const max = parseInt($("#filter-max").value)||10;
-    
-    // Atualiza o state global (pois o usuário pediu explicitamente esse range no modal)
     state.minLevel = min;
     state.maxLevel = max;
-
-    // Gera mão aleatória (ponderada) para o Jogador
     const randomDeck = weightedRandomHand(5, min, max);
-    
-    // Inicia
     document.getElementById("deck-modal").classList.add("hidden");
     deal(randomDeck);
     restartGameUI();
 }
 
-/* ------------------------- */
-
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
-// NOVA: Sorteio Ponderado (Níveis altos têm mais peso)
 function weightedRandomHand(count, min, max){
-    // Filtra pool
     let pool = CARDS.filter(c => (c.level||1)>=min && (c.level||1)<=max);
-    if(pool.length < count) pool = CARDS; // Fallback
-
-    // Peso = Nível da carta (Nível 10 é 10x mais provável que Nível 1)
+    if(pool.length < count) pool = CARDS;
     const weightedPool = pool.map(c => ({ card: c, weight: (c.level||1) }));
-    
     const out = [];
-    
     while(out.length < count && weightedPool.length > 0){
         const totalWeight = weightedPool.reduce((sum, item) => sum + item.weight, 0);
         let r = Math.random() * totalWeight;
-        
         let selectedIndex = -1;
         for(let i=0; i<weightedPool.length; i++){
             r -= weightedPool[i].weight;
-            if(r <= 0){
-                selectedIndex = i;
-                break;
-            }
+            if(r <= 0){ selectedIndex = i; break; }
         }
         if(selectedIndex === -1) selectedIndex = weightedPool.length - 1;
-        
         out.push({...weightedPool[selectedIndex].card});
-        
-        // Remove do pool para evitar duplicatas
         weightedPool.splice(selectedIndex, 1);
     }
-    
-    // Completa se faltar
     while(out.length < count){
         const randomFallback = pool[Math.floor(Math.random()*pool.length)];
         out.push({...randomFallback});
     }
-
     return out;
 }
 
 function deal(playerChoice = null){
-  // Definição do Range da IA para esta partida (Variáveis Locais!)
   let aiMin = state.minLevel;
   let aiMax = state.maxLevel;
 
-  // 1. Mão do Jogador
   if(playerChoice && playerChoice.length === 5){
       state.yourHand = playerChoice.map(c=>({...c})); 
-
-      // ADAPTAÇÃO DA IA:
-      // Se o jogador escolheu cartas (manualmente ou via random button), 
-      // a IA deve jogar no mesmo nível dessas cartas.
       const levels = state.yourHand.map(c => c.level || 1);
       aiMin = Math.min(...levels);
       aiMax = Math.max(...levels);
-      
-      // NOTA: Não alteramos state.minLevel aqui para preservar a seleção do menu.
-      
   } else {
-      // Se não houver escolha (ex: first load), usa o padrão global
       state.yourHand = weightedRandomHand(5, state.minLevel, state.maxLevel);
   }
 
-  // 2. Mão da IA (Usa o range calculado localmente)
   state.aiHand = weightedRandomHand(5, aiMin, aiMax);
   
-  // 3. Tabuleiro
   state.board=Array(9).fill(null);
   state.boardElements=Array(9).fill("None");
   if(state.rules.elemental){
@@ -317,26 +270,42 @@ function deal(playerChoice = null){
   state.busy=false;
 }
 
-function restart(){
-    openDeckBuilder();
-}
+function restart(){ openDeckBuilder(); }
 
 function restartGameUI(){
   renderAll(); updateActiveHandIndicator(); updateHandInteractivity();
   const hideCk=$("#hide-opponent");
   if(state.aiLevel==="off"){ state.hideOpponent=false; if(hideCk){ hideCk.checked=false; hideCk.disabled=true; } }
   else { if(hideCk) hideCk.disabled=false; }
-  
   if(!state.yourTurn && state.aiLevel!=="off"){ setTimeout(aiPlay, 1000); }
 }
 
+/* --- LOGIC FIX: Case Insensitive Element Check --- */
 function getAdjustedStats(card, index){
   const base={...card.stats}, adj={...base}, tags={T:"",R:"",B:"",L:""};
+  
   if(state.rules.elemental && index!=null){
-    const tileElem=state.boardElements[index];
-    if(tileElem && tileElem!=="None"){
-      if(card.element===tileElem){ for(const k of ["T","R","B","L"]){ adj[k] = (adj[k]===10 ? 11 : Math.min(10, adj[k]+1)); tags[k]="boost"; } }
-      else { for(const k of ["T","R","B","L"]){ adj[k] = (adj[k]===1 ? 0 : Math.max(1, adj[k]-1)); tags[k]="penalty"; } }
+    const tileElem = state.boardElements[index];
+    if(tileElem && tileElem !== "None"){
+      // Normalização para evitar erros de caixa (Fire vs fire) ou espaço
+      const cardElem = (card.element || "None").trim().toLowerCase();
+      const boardElem = tileElem.trim().toLowerCase();
+      
+      if(cardElem === boardElem){ 
+        // ELEMENT MATCH (+1)
+        for(const k of ["T","R","B","L"]){ 
+            adj[k] = (adj[k]===10 ? 11 : Math.min(10, adj[k]+1)); 
+            tags[k]="boost"; 
+        } 
+      }
+      else { 
+        // ELEMENT MISMATCH (-1)
+        // Se a carta tem elemento diferente OU não tem elemento (None), perde ponto
+        for(const k of ["T","R","B","L"]){ 
+            adj[k] = (adj[k]===1 ? 0 : Math.max(1, adj[k]-1)); 
+            tags[k]="penalty"; 
+        } 
+      }
     }
   }
   return {adj,tags};
@@ -371,19 +340,10 @@ function detectSamePlus(owner, index, placedCard){
     for(const p of plusPairs){ if(!sums.has(p.sum)) sums.set(p.sum, []); sums.get(p.sum).push(p); }
     for(const [sum, arr] of sums){
       if(arr.length>=2){
-        const hasEnemy = arr.some(x => {
-            const slot = state.board[x.ni];
-            return slot && slot.owner !== owner;
-        });
-
+        const hasEnemy = arr.some(x => { const slot = state.board[x.ni]; return slot && slot.owner !== owner; });
         if(hasEnemy){
             plusTriggered=true;
-            arr.forEach(x=>{ 
-                const slot = state.board[x.ni]; 
-                if(slot && slot.owner!==owner){ 
-                    if(!plusFlipIdx.includes(x.ni)) plusFlipIdx.push(x.ni); 
-                } 
-            });
+            arr.forEach(x=>{ const slot = state.board[x.ni]; if(slot && slot.owner!==owner){ if(!plusFlipIdx.includes(x.ni)) plusFlipIdx.push(x.ni); } });
         }
       }
     }
@@ -411,6 +371,7 @@ function renderHands(){
   handAiEl.innerHTML=""; state.aiHand.forEach((c,i)=> handAiEl.appendChild(createHandCard(c,"ai",i, faceDownOpp)));
   updateActiveHandIndicator(); updateHandInteractivity();
 }
+
 function createHandCard(card, owner, handIndex, faceDown=false){
   const w=document.createElement("div"); w.className="card owner-"+owner;
   w.dataset.owner=owner; w.dataset.hindex=handIndex;
@@ -418,6 +379,7 @@ function createHandCard(card, owner, handIndex, faceDown=false){
       <div class="card-face front">
           <img src="${card.image}">
           ${faceDown ? '' : getPipHtml(card)}
+          ${(card.element && card.element!=="None" && !faceDown) ? getElementIcon(card) : ''}
       </div>
       <div class="card-face back"><img src="assets/ui/card_back.png"></div>
   </div>`;
@@ -434,6 +396,7 @@ function createHandCard(card, owner, handIndex, faceDown=false){
   });
   return w;
 }
+
 function getPipHtml(card, idx=null){
   const {adj,tags} = getAdjustedStats(card, idx);
   return `<div class="stats-central">
@@ -444,20 +407,42 @@ function getPipHtml(card, idx=null){
   </div>`;
 }
 
+// NOVA FUNÇÃO: Gera o ícone do elemento na carta
+function getElementIcon(card){
+    if(!card.element || card.element === "None") return "";
+    // CORREÇÃO: Adicionado o atributo data-elem para o CSS poder ler e colorir
+    return `<div class="card-element-icon" data-elem="${card.element}">
+              ${card.element.charAt(0).toUpperCase()}
+            </div>`;
+}
+
 function renderBoard(){
   for(let i=0;i<9;i++){
     const cell=boardEl.children[i], elem=state.boardElements[i];
-    if(elem!=="None"){ 
-        cell.dataset.element=elem;
-        cell.style.background="linear-gradient(to bottom right, rgba(96,165,250,.12), rgba(96,165,250,.02))";
-        if(!cell.querySelector(".element-badge")){ 
-            const b=document.createElement("div"); b.className="element-badge"; b.textContent=elem; cell.appendChild(b); 
-        }
+	
+	// --- CORREÇÃO AQUI ---
+    // Removemos qualquer badge antiga para garantir que não sobrem "fantasmas"
+    const existingBadge = cell.querySelector(".element-badge");
+    if(existingBadge){
+        existingBadge.remove();
+    }
+
+    if(elem !== "None"){ 
+        cell.dataset.element = elem;
+        cell.style.background = "linear-gradient(to bottom right, rgba(96,165,250,.12), rgba(96,165,250,.02))";
+        
+        // Cria sempre uma badge nova com o texto correto da partida ATUAL
+        const b = document.createElement("div");
+        b.className = "element-badge";
+        b.textContent = elem; // Garante que o texto bata com a lógica
+        cell.appendChild(b); 
+        
     } else { 
         cell.removeAttribute("data-element"); 
-        cell.style.background=""; 
-        const b=cell.querySelector(".element-badge"); if(b) b.remove(); 
+        cell.style.background = ""; 
     }
+    // ---------------------
+	
     const slot=state.board[i];
     cell.classList.toggle("empty", !slot);
     const existing = cell.querySelector(".tile-card");
@@ -465,6 +450,10 @@ function renderBoard(){
     if(slot){
         const w=document.createElement("div"); w.className="tile-card owner-"+slot.owner;
         w.innerHTML = `<img src="${slot.card.image}">` + getPipHtml(slot.card, i);
+        // Mostra elemento na carta do tabuleiro também
+        if(slot.card.element && slot.card.element!=="None"){
+             w.innerHTML += getElementIcon(slot.card);
+        }
         cell.appendChild(w);
     }
   }
@@ -598,7 +587,9 @@ function snapshot(){ return { board:JSON.parse(JSON.stringify(state.board)), boa
 function getAdjustedStatsSim(ns, card, index){
   const adj={...card.stats};
   if(ns.rules.elemental && index!=null && ns.boardElements[index]!=="None"){
-      if(card.element===ns.boardElements[index]) { for(const k of ["T","R","B","L"]) adj[k]=adj[k]===10?11:Math.min(10,adj[k]+1); }
+      // Normalização também na simulação
+      const cE = (card.element||"").toLowerCase(); const bE = (ns.boardElements[index]||"").toLowerCase();
+      if(cE===bE) { for(const k of ["T","R","B","L"]) adj[k]=adj[k]===10?11:Math.min(10,adj[k]+1); }
       else { for(const k of ["T","R","B","L"]) adj[k]=adj[k]===1?0:Math.max(1,adj[k]-1); }
   }
   return adj;

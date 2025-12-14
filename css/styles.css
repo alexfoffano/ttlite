@@ -485,6 +485,107 @@ html, body {
   color: #fff;
   z-index: 5;
 }
+
+/* Estilo do Indicador de Elemento na Carta */
+.card-element-icon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+/* Estilo Base do Ícone */
+.card-element-icon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(30, 30, 30, 0.9); /* Fundo padrão neutro */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* --- CORES POR ELEMENTO --- */
+
+/* Fogo: Vermelho Intenso */
+.card-element-icon[data-elem="Fire"] {
+  background: linear-gradient(135deg, #7f1d1d, #ef4444);
+  border-color: #fca5a5;
+  box-shadow: 0 0 5px #ef4444;
+}
+
+/* Gelo: Ciano/Azul Claro */
+.card-element-icon[data-elem="Ice"] {
+  background: linear-gradient(135deg, #0e7490, #22d3ee);
+  border-color: #a5f3fc;
+  box-shadow: 0 0 5px #22d3ee;
+}
+
+/* Trovão: Amarelo/Dourado */
+.card-element-icon[data-elem="Thunder"] {
+  background: linear-gradient(135deg, #a16207, #eab308);
+  border-color: #fde047;
+  color: #fff;
+  box-shadow: 0 0 5px #eab308;
+}
+
+/* Terra: Marrom/Laranja */
+.card-element-icon[data-elem="Earth"] {
+  background: linear-gradient(135deg, #431407, #ea580c);
+  border-color: #fdba74;
+}
+
+/* Veneno: Roxo */
+.card-element-icon[data-elem="Poison"] {
+  background: linear-gradient(135deg, #581c87, #9333ea);
+  border-color: #d8b4fe;
+  box-shadow: 0 0 5px #9333ea;
+}
+
+/* Vento: Verde */
+.card-element-icon[data-elem="Wind"] {
+  background: linear-gradient(135deg, #064e3b, #10b981);
+  border-color: #6ee7b7;
+}
+
+/* Água: Azul Escuro */
+.card-element-icon[data-elem="Water"] {
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+  border-color: #93c5fd;
+}
+
+/* Sagrado: Branco/Pérola */
+.card-element-icon[data-elem="Holy"] {
+  background: linear-gradient(135deg, #9ca3af, #f3f4f6);
+  border-color: #ffffff;
+  color: #1f2937; /* Texto escuro para contraste no branco */
+  box-shadow: 0 0 8px #ffffff;
+}
+
 .deck-card .pip.T { top: 4px; left: 50%; transform: translateX(-50%); }
 .deck-card .pip.R { top: 50%; right: 4px; transform: translateY(-50%); }
 .deck-card .pip.B { bottom: 4px; left: 50%; transform: translateX(-50%); }
