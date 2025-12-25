@@ -276,10 +276,10 @@ html, body {
   color: #fff; text-shadow: 0 1px 2px #000;
   box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
-.stats-central .pip.T { top: 6px; left: 50%; transform: translateX(-50%); }
-.stats-central .pip.R { top: 50%; right: 6px; transform: translateY(-50%); }
-.stats-central .pip.B { bottom: 6px; left: 50%; transform: translateX(-50%); }
-.stats-central .pip.L { top: 50%; left: 6px; transform: translateY(-50%); }
+.stats-central .pip.T { top: 5px; left: 50%; transform: translateX(-50%); }
+.stats-central .pip.R { top: 50%; right: 5px; transform: translateY(-50%); }
+.stats-central .pip.B { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.stats-central .pip.L { top: 50%; left: 5px; transform: translateY(-50%); }
 
 .flip-anim { animation: flipX 0.4s ease; }
 @keyframes flipX { 0% {transform: rotateY(0)} 50% {transform: rotateY(90deg)} 100% {transform: rotateY(0)} }
@@ -486,103 +486,92 @@ html, body {
   z-index: 5;
 }
 
-/* Estilo do Indicador de Elemento na Carta */
-.card-element-icon {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  color: #fff;
-  font-size: 10px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 25;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-  pointer-events: none;
-}
+/* --- ÍCONES ELEMENTAIS (Unificado para Cartas e Tabuleiro) --- */
 
-/* Estilo Base do Ícone */
-.card-element-icon {
+.element-icon {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 4px;      /* Posição fixa igual para ambos */
+  right: 4px;    /* Posição fixa igual para ambos */
   width: 20px;
   height: 20px;
-  background: rgba(30, 30, 30, 0.9); /* Fundo padrão neutro */
+  
+  /* Visual da bolinha */
+  background: rgba(30, 30, 30, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
+  
+  /* Texto (Letra) */
   color: #fff;
   font-size: 10px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 25;
+  
+  z-index: 5; /* Z-index baixo (tabuleiro) */
   box-shadow: 0 2px 4px rgba(0,0,0,0.8);
   pointer-events: none;
   text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
-/* --- CORES POR ELEMENTO --- */
+/* Aumenta o Z-index se o ícone estiver DENTRO de uma carta (para ficar sobre a img) */
+.card .element-icon, .tile-card .element-icon {
+  z-index: 25; 
+}
 
-/* Fogo: Vermelho Intenso */
-.card-element-icon[data-elem="Fire"] {
+/* --- REGRA DE OCULTAÇÃO (Oculta ícone do tabuleiro se a célula não estiver vazia) --- */
+/* O ícone do tabuleiro é filho direto de .cell. O da carta é filho de .tile-card. */
+.cell:not(.empty) > .element-icon {
+  display: none;
+}
+
+
+/* --- CORES POR ELEMENTO (Mesmas de antes, atualizadas para a nova classe) --- */
+
+.element-icon[data-elem="Fire"] {
   background: linear-gradient(135deg, #7f1d1d, #ef4444);
   border-color: #fca5a5;
   box-shadow: 0 0 5px #ef4444;
 }
 
-/* Gelo: Ciano/Azul Claro */
-.card-element-icon[data-elem="Ice"] {
+.element-icon[data-elem="Ice"] {
   background: linear-gradient(135deg, #0e7490, #22d3ee);
   border-color: #a5f3fc;
   box-shadow: 0 0 5px #22d3ee;
 }
 
-/* Trovão: Amarelo/Dourado */
-.card-element-icon[data-elem="Thunder"] {
+.element-icon[data-elem="Thunder"] {
   background: linear-gradient(135deg, #a16207, #eab308);
   border-color: #fde047;
   color: #fff;
   box-shadow: 0 0 5px #eab308;
 }
 
-/* Terra: Marrom/Laranja */
-.card-element-icon[data-elem="Earth"] {
+.element-icon[data-elem="Earth"] {
   background: linear-gradient(135deg, #431407, #ea580c);
   border-color: #fdba74;
 }
 
-/* Veneno: Roxo */
-.card-element-icon[data-elem="Poison"] {
+.element-icon[data-elem="Poison"] {
   background: linear-gradient(135deg, #581c87, #9333ea);
   border-color: #d8b4fe;
   box-shadow: 0 0 5px #9333ea;
 }
 
-/* Vento: Verde */
-.card-element-icon[data-elem="Wind"] {
+.element-icon[data-elem="Wind"] {
   background: linear-gradient(135deg, #064e3b, #10b981);
   border-color: #6ee7b7;
 }
 
-/* Água: Azul Escuro */
-.card-element-icon[data-elem="Water"] {
+.element-icon[data-elem="Water"] {
   background: linear-gradient(135deg, #1e3a8a, #3b82f6);
   border-color: #93c5fd;
 }
 
-/* Sagrado: Branco/Pérola */
-.card-element-icon[data-elem="Holy"] {
+.element-icon[data-elem="Holy"] {
   background: linear-gradient(135deg, #9ca3af, #f3f4f6);
   border-color: #ffffff;
-  color: #1f2937; /* Texto escuro para contraste no branco */
+  color: #1f2937;
   box-shadow: 0 0 8px #ffffff;
 }
 

@@ -407,57 +407,69 @@ function getPipHtml(card, idx=null){
   </div>`;
 }
 
-// NOVA FUNÇÃO: Gera o ícone do elemento na carta
-function getElementIcon(card){
-    if(!card.element || card.element === "None") return "";
-    // CORREÇÃO: Adicionado o atributo data-elem para o CSS poder ler e colorir
-    return `<div class="card-element-icon" data-elem="${card.element}">
-              ${card.element.charAt(0).toUpperCase()}
+// Função auxiliar unificada: gera o HTML do ícone para Tabuleiro OU Carta
+function getElementIcon(elementName){
+    // Se recebeu o objeto carta inteiro, extrai o elemento
+    if(typeof elementName === 'object' && elementName.element) {
+        elementName = elementName.element;
+    }
+    
+    if(!elementName || elementName === "None") return "";
+    
+    // Normaliza para Capitalized (ex: "fire" -> "Fire") para bater com o CSS
+    const formatted = elementName.charAt(0).toUpperCase() + elementName.slice(1).toLowerCase();
+    
+    return `<div class="element-icon" data-elem="${formatted}">
+              ${formatted.charAt(0)}
             </div>`;
 }
 
 function renderBoard(){
-  for(let i=0;i<9;i++){
-    const cell=boardEl.children[i], elem=state.boardElements[i];
-	
-	// --- CORREÇÃO AQUI ---
-    // Removemos qualquer badge antiga para garantir que não sobrem "fantasmas"
-    const existingBadge = cell.querySelector(".element-badge");
-    if(existingBadge){
-        existingBadge.remove();
-    }
+  for(let i=0; i<9; i++){
+    const cell = boardEl.children[i];
+    const boardElem = state.boardElements[i];
+    
+    // 1. Limpeza: Remove ícones e cartas antigas para redesenhar do zero
+    // (Isso evita duplicação de ícones)
+    cell.innerHTML = ""; 
 
-    if(elem !== "None"){ 
-        cell.dataset.element = elem;
+    // 2. Desenha o Elemento do Tabuleiro (se houver)
+    if(boardElem !== "None"){ 
+        cell.dataset.element = boardElem;
         cell.style.background = "linear-gradient(to bottom right, rgba(96,165,250,.12), rgba(96,165,250,.02))";
         
-        // Cria sempre uma badge nova com o texto correto da partida ATUAL
-        const b = document.createElement("div");
-        b.className = "element-badge";
-        b.textContent = elem; // Garante que o texto bata com a lógica
-        cell.appendChild(b); 
+        // AQUI: Usa a mesma função da carta para gerar o ícone do tabuleiro
+        // O CSS .cell:not(.empty) > .element-icon vai ocultar isso se tiver carta
+        cell.innerHTML += getElementIcon(boardElem);
         
     } else { 
         cell.removeAttribute("data-element"); 
         cell.style.background = ""; 
     }
-    // ---------------------
-	
-    const slot=state.board[i];
+
+    const slot = state.board[i];
+    
+    // Define se está vazio ou cheio (O CSS usa isso para esconder o ícone de baixo)
     cell.classList.toggle("empty", !slot);
-    const existing = cell.querySelector(".tile-card");
-    if(existing) existing.remove();
+    
+    // 3. Desenha a Carta (se houver)
     if(slot){
-        const w=document.createElement("div"); w.className="tile-card owner-"+slot.owner;
-        w.innerHTML = `<img src="${slot.card.image}">` + getPipHtml(slot.card, i);
-        // Mostra elemento na carta do tabuleiro também
-        if(slot.card.element && slot.card.element!=="None"){
-             w.innerHTML += getElementIcon(slot.card);
-        }
+        const w = document.createElement("div"); 
+        w.className = "tile-card owner-" + slot.owner;
+        
+        // Imagem + Números
+        let htmlContent = `<img src="${slot.card.image}">` + getPipHtml(slot.card, i);
+        
+        // Ícone Elemental DA CARTA (se houver)
+        // Ele vai aparecer por cima de tudo graças ao z-index: 25 do CSS
+        htmlContent += getElementIcon(slot.card.element);
+        
+        w.innerHTML = htmlContent;
         cell.appendChild(w);
     }
   }
 }
+
 function refreshBoardStats(){ renderBoard(); } 
 function renderScores(){ 
     const you = state.yourHand.length + state.board.filter(s=>s && s.owner==="you").length; 
