@@ -315,6 +315,13 @@ html, body {
 .win-banner .box {
   background: #111e2f; padding: 24px; border-radius: 16px; border: 1px solid #2c4c78; text-align: center;
 }
+.win-banner .box h2 {
+  margin-top: 0;      /* Remove o espaço do topo */
+  margin-bottom: 10px; /* Ajusta o espaço de baixo para não colar no texto */
+  font-size: 24px;
+  color: #fff;
+}
+
 .win-banner .actions { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
 
 .debug-panel { position: fixed; right: 10px; bottom: 10px; width: 300px; max-height: 40vh; background: #0b1828; border: 1px solid #27476f; z-index: 60; border-radius: 8px; display: flex; flex-direction: column; }
